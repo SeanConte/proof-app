@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<!-- ProofApp14_0: free-mode error tooltips on justification highlights;
-     console logging cleanup (DEBUG_UI off, DELETE logs removed) -->
+<!-- ProofApp16_0: expanded to 96 examples (hard ones grouped at end);
+     12-digit static completion hash per example; hash display toggle in settings -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1695,6 +1695,25 @@
       font-weight: bold;
       color: #1a1a1a;
     }
+    .modal-hash-box {
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: #f0eaff;
+      border: 2px solid #7c3aed;
+      border-radius: 4px;
+      font-size: 13px;
+      text-align: center;
+      color: #3b0764;
+    }
+    .modal-hash {
+      font-family: 'Courier New', monospace;
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 3px;
+      color: #6d28d9;
+      display: block;
+      margin-top: 4px;
+    }
     .proof-modal-actions {
       display: flex; gap: 8px; justify-content: flex-end;
     }
@@ -1941,6 +1960,13 @@
         <label for="logging-toggle">Record interaction log</label>
       </div>
       <button class="settings-export-btn" id="export-btn">⬇ Export…</button>
+    </div>
+    <div class="settings-section">
+      <h5>Completion Code</h5>
+      <div class="settings-option">
+        <input type="checkbox" id="hash-toggle">
+        <label for="hash-toggle">Show completion code on proof finish</label>
+      </div>
     </div>
     <div class="settings-section">
       <h5>Color Scheme</h5>
@@ -2738,142 +2764,322 @@ function extractAtomicsFromAst(ast, out = []) {
     // ═══════════════════════════════════════════════════════════════════════════
     const examples = {
       'custom': { premises: [], conclusion: '', _isCustom: true },
-      'ex1-andelim-mp': { slug: 'mp-conj', name: 'MP from Conjunction',
-        premises: ['P · Q', 'P → R'],
-        conclusion: 'R'
-      },
-      'ex2-andintro-mp': { slug: 'mp-conj-intro', name: 'MP with Conjunction Intro',
-        premises: ['P', 'Q', '(P · Q) → R'],
-        conclusion: 'R'
-      },
-      'ex3-chain-mp': { slug: 'chain-mp', name: 'Chain of MP',
-        premises: ['P → Q', 'Q → R', 'P'],
-        conclusion: 'R'
-      },
-      'ex4-orelim-chain': { slug: 'or-elim-chain', name: 'Disjunction Elim + Chain',
-        premises: ['P ∨ Q', 'P → R', 'Q → R', 'R → S'],
-        conclusion: 'S'
-      },
-      'ex5-cond-compose': { slug: 'hypothetical-syll', name: 'Hypothetical Syllogism',
-        premises: ['P → Q', 'Q → R'],
-        conclusion: 'P → R'
-      },
-      'ex6-contraposition': { slug: 'contraposition', name: 'Contraposition',
-        premises: ['P → Q'],
-        conclusion: '¬Q → ¬P'
-      },
-      'ex7-pbc-neg': { slug: 'neg-intro', name: 'Negation Introduction',
-        premises: ['P → Q', 'P → ¬Q'],
-        conclusion: '¬P'
-      },
-      'ex8-orelim-explosion': { slug: 'or-expl', name: 'Disjunction + Explosion',
-        premises: ['P ∨ Q', '¬P', 'Q → R'],
-        conclusion: 'R'
-      },
-      'ex9-bicond-trans': { slug: 'bicond-trans', name: 'Biconditional Transitivity',
-        premises: ['P ↔ Q', 'Q ↔ R'],
-        conclusion: 'P ↔ R'
-      },
-      'ex10-nested-cond': { slug: 'self-dist', name: 'Self-Distribution',
-        premises: [],
-        conclusion: 'P → (Q → P)'
-      },
-      'ex11-demorgan': { slug: 'demorgan-or', name: "De Morgan's (Or)",
-        premises: ['¬(P ∨ Q)'],
-        conclusion: '¬P · ¬Q'
-      },
-      'ex12-cond-to-conj': { slug: 'cond-conj', name: 'Conditional to Conjunction',
-        premises: ['P → Q', 'P → R'],
-        conclusion: 'P → (Q · R)'
-      },
 
-      // ── Batch 2: Connective basics & immediate combinations ──
-      'ex13-conj-comm': { slug: 'conj-comm', name: 'Conjunction Commutativity',
-        premises: ['P · Q'],
-        conclusion: 'Q · P'
-      },
-      'ex14-disj-intro-left': { slug: 'disj-intro-l', name: 'Disjunction Intro (Left)',
-        premises: ['P'],
-        conclusion: 'P ∨ Q'
-      },
-      'ex15-disj-intro-right': { slug: 'disj-intro-r', name: 'Disjunction Intro (Right)',
-        premises: ['Q'],
-        conclusion: 'P ∨ Q'
-      },
-      'ex16-bicond-mp': { slug: 'bicond-mp', name: 'Biconditional MP',
-        premises: ['P ↔ Q', 'P'],
-        conclusion: 'Q'
-      },
-      'ex17-bicond-mt': { slug: 'bicond-mt', name: 'Biconditional MT',
-        premises: ['P ↔ Q', '¬Q'],
-        conclusion: '¬P'
-      },
-      'ex18-disj-syll': { slug: 'disj-syll', name: 'Disjunctive Syllogism',
-        premises: ['P ∨ Q', '¬P'],
-        conclusion: 'Q'
-      },
-      'ex19-absorption': { slug: 'absorption', name: 'Absorption',
-        premises: ['P → Q'],
-        conclusion: 'P → (P · Q)'
-      },
-      'ex20-conj-assoc': { slug: 'conj-assoc', name: 'Conjunction Associativity',
-        premises: ['P · (Q · R)'],
-        conclusion: '(P · Q) · R'
-      },
+      // ── 1–12: Original core set ──────────────────────────────────────────────
+      'ex1-andelim-mp': { slug: 'mp-conj',
+        premises: ['P · Q', 'P → R'], conclusion: 'R' },
+      'ex2-andintro-mp': { slug: 'mp-conj-intro',
+        premises: ['P', 'Q', '(P · Q) → R'], conclusion: 'R' },
+      'ex3-chain-mp': { slug: 'chain-mp',
+        premises: ['P → Q', 'Q → R', 'P'], conclusion: 'R' },
+      'ex4-orelim-chain': { slug: 'or-elim-chain',
+        premises: ['P ∨ Q', 'P → R', 'Q → R', 'R → S'], conclusion: 'S' },
+      'ex5-cond-compose': { slug: 'hypothetical-syll',
+        premises: ['P → Q', 'Q → R'], conclusion: 'P → R' },
+      'ex6-contraposition': { slug: 'contraposition',
+        premises: ['P → Q'], conclusion: '¬Q → ¬P' },
+      'ex7-pbc-neg': { slug: 'neg-intro',
+        premises: ['P → Q', 'P → ¬Q'], conclusion: '¬P' },
+      'ex8-orelim-explosion': { slug: 'or-expl',
+        premises: ['P ∨ Q', '¬P', 'Q → R'], conclusion: 'R' },
+      'ex9-bicond-trans': { slug: 'bicond-trans',
+        premises: ['P ↔ Q', 'Q ↔ R'], conclusion: 'P ↔ R' },
+      'ex10-nested-cond': { slug: 'self-dist',
+        premises: [], conclusion: 'P → (Q → P)' },
+      'ex11-demorgan': { slug: 'demorgan-or',
+        premises: ['¬(P ∨ Q)'], conclusion: '¬P · ¬Q' },
+      'ex12-cond-to-conj': { slug: 'cond-conj',
+        premises: ['P → Q', 'P → R'], conclusion: 'P → (Q · R)' },
 
-      // ── Batch 3: Subproof-heavy & multi-step ──
-      'ex21-disj-comm': { slug: 'disj-comm', name: 'Disjunction Commutativity',
-        premises: ['P ∨ Q'],
-        conclusion: 'Q ∨ P'
-      },
-      'ex22-iff-intro': { slug: 'bicond-intro', name: 'Biconditional Introduction',
-        premises: ['P → Q', 'Q → P'],
-        conclusion: 'P ↔ Q'
-      },
-      'ex23-neg-neg-intro': { slug: 'dn-intro', name: 'Double Negation Intro',
-        premises: ['P'],
-        conclusion: '¬¬P'
-      },
-      'ex24-neg-neg-elim': { slug: 'dn-elim', name: 'Double Negation Elim',
-        premises: ['¬¬P'],
-        conclusion: 'P'
-      },
-      'ex25-demorgan-conj': { slug: 'demorgan-conj', name: "De Morgan's (Conj)",
-        premises: ['¬P ∨ ¬Q'],
-        conclusion: '¬(P · Q)'
-      },
-      'ex26-hypothetical-disj': { slug: 'hyp-disj', name: 'Hypothetical Disjunction',
-        premises: ['P → R', 'Q → R'],
-        conclusion: '(P ∨ Q) → R'
-      },
-      'ex27-exportation': { slug: 'exportation', name: 'Exportation',
-        premises: ['P → (Q → R)'],
-        conclusion: '(P · Q) → R'
-      },
-      'ex28-importation': { slug: 'importation', name: 'Importation',
-        premises: ['(P · Q) → R'],
-        conclusion: 'P → (Q → R)'
-      },
-      'ex29-self-cond': { slug: 'self-cond', name: 'Self-Conditional',
-        premises: [],
-        conclusion: 'P → P'
-      },
-      'ex30-distribution': { slug: 'distribution', name: 'Distribution',
-        premises: ['P · (Q ∨ R)'],
-        conclusion: '(P · Q) ∨ (P · R)'
-      },
-      'ex31-disj-to-cond': { slug: 'disj-cond', name: 'Disjunction to Conditional',
-        premises: ['¬P ∨ Q'],
-        conclusion: 'P → Q'
-      },
-      'ex32-constructive-dilemma': { slug: 'constr-dilemma', name: 'Constructive Dilemma',
-        premises: ['(P → Q) · (R → S)', 'P ∨ R'],
-        conclusion: 'Q ∨ S'
-      }
+      // ── 13–24: Connective basics ─────────────────────────────────────────────
+      'ex13-conj-comm': { slug: 'conj-comm',
+        premises: ['P · Q'], conclusion: 'Q · P' },
+      'ex14-disj-intro-left': { slug: 'disj-intro-l',
+        premises: ['P'], conclusion: 'P ∨ Q' },
+      'ex15-disj-intro-right': { slug: 'disj-intro-r',
+        premises: ['Q'], conclusion: 'P ∨ Q' },
+      'ex16-bicond-mp': { slug: 'bicond-mp',
+        premises: ['P ↔ Q', 'P'], conclusion: 'Q' },
+      'ex17-bicond-mt': { slug: 'bicond-mt',
+        premises: ['P ↔ Q', '¬Q'], conclusion: '¬P' },
+      'ex18-disj-syll': { slug: 'disj-syll',
+        premises: ['P ∨ Q', '¬P'], conclusion: 'Q' },
+      'ex19-absorption': { slug: 'absorption',
+        premises: ['P → Q'], conclusion: 'P → (P · Q)' },
+      'ex20-conj-assoc': { slug: 'conj-assoc',
+        premises: ['P · (Q · R)'], conclusion: '(P · Q) · R' },
+      'ex21-disj-comm': { slug: 'disj-comm',
+        premises: ['P ∨ Q'], conclusion: 'Q ∨ P' },
+      'ex22-iff-intro': { slug: 'bicond-intro',
+        premises: ['P → Q', 'Q → P'], conclusion: 'P ↔ Q' },
+      'ex23-neg-neg-intro': { slug: 'dn-intro',
+        premises: ['P'], conclusion: '¬¬P' },
+      'ex24-neg-neg-elim': { slug: 'dn-elim',
+        premises: ['¬¬P'], conclusion: 'P' },
+
+      // ── 25–36: Flat multi-step ───────────────────────────────────────────────
+      'ex25-conj-multi': { slug: 'conj-multi',
+        premises: ['P · Q', 'Q · R'], conclusion: 'P · R' },
+      'ex26-conj-assoc-r': { slug: 'conj-assoc-r',
+        premises: ['(P · Q) · R'], conclusion: 'P · (Q · R)' },
+      'ex27-conj-rearrange': { slug: 'conj-rearrange',
+        premises: ['P · Q · R'], conclusion: 'R · P' },
+      'ex28-conj-extract': { slug: 'conj-extract',
+        premises: ['P · (Q · R)'], conclusion: 'R' },
+      'ex29-conj-four': { slug: 'conj-four',
+        premises: ['(P · Q) · (R · S)'], conclusion: 'Q · R' },
+      'ex30-cond-mp-chain': { slug: 'cond-mp-chain',
+        premises: ['P → (Q → R)', 'P · Q'], conclusion: 'R' },
+      'ex31-bicond-use': { slug: 'bicond-use',
+        premises: ['P ↔ Q', 'P'], conclusion: 'Q' },
+      'ex32-bicond-rev': { slug: 'bicond-rev',
+        premises: ['P ↔ Q', 'Q'], conclusion: 'P' },
+      'ex33-explosion-conj': { slug: 'expl-conj',
+        premises: ['P', '¬P'], conclusion: 'Q · R' },
+      'ex34-explosion-cond': { slug: 'expl-cond',
+        premises: ['P', '¬P'], conclusion: 'Q → R' },
+      'ex35-triple-neg': { slug: 'triple-neg',
+        premises: ['¬¬¬P'], conclusion: '¬P' },
+      'ex36-disj-add': { slug: 'disj-add',
+        premises: ['P · Q'], conclusion: '(P · Q) ∨ R' },
+
+      // ── 37–48: Single subproof ───────────────────────────────────────────────
+      'ex37-cond-from-conj': { slug: 'cond-from-conj',
+        premises: ['P · Q'], conclusion: 'P → Q' },
+      'ex38-const-to-cond': { slug: 'const-to-cond',
+        premises: ['P'], conclusion: 'Q → P' },
+      'ex39-self-cond': { slug: 'self-cond',
+        premises: [], conclusion: 'P → P' },
+      'ex40-self-dist': { slug: 'self-dist-2',
+        premises: [], conclusion: 'P → (Q → P)' },
+      'ex41-exportation': { slug: 'exportation',
+        premises: ['P → (Q → R)'], conclusion: '(P · Q) → R' },
+      'ex42-importation': { slug: 'importation',
+        premises: ['(P · Q) → R'], conclusion: 'P → (Q → R)' },
+      'ex43-cond-swap': { slug: 'cond-swap',
+        premises: ['P → (Q → R)'], conclusion: 'Q → (P → R)' },
+      'ex44-disj-to-cond': { slug: 'disj-cond',
+        premises: ['¬P ∨ Q'], conclusion: 'P → Q' },
+      'ex45-demorgan-conj': { slug: 'demorgan-conj',
+        premises: ['¬P ∨ ¬Q'], conclusion: '¬(P · Q)' },
+      'ex46-neg-from-conds': { slug: 'neg-from-conds',
+        premises: ['P → Q', 'P → ¬Q'], conclusion: '¬P' },
+      'ex47-neg-self': { slug: 'neg-self',
+        premises: ['P → ¬P'], conclusion: '¬P' },
+      'ex48-cond-to-cond': { slug: 'cond-to-cond',
+        premises: ['P → Q'], conclusion: '(Q → R) → (P → R)' },
+
+      // ── 49–60: Sequential / multiple subproofs ───────────────────────────────
+      'ex49-distributive': { slug: 'distribution',
+        premises: ['P · (Q ∨ R)'], conclusion: '(P · Q) ∨ (P · R)' },
+      'ex50-distribution-rev': { slug: 'distribution-rev',
+        premises: ['(P · Q) ∨ (P · R)'], conclusion: 'P · (Q ∨ R)' },
+      'ex51-hyp-disj': { slug: 'hyp-disj',
+        premises: ['P → R', 'Q → R'], conclusion: '(P ∨ Q) → R' },
+      'ex52-constructive-dilemma': { slug: 'constr-dilemma',
+        premises: ['(P → Q) · (R → S)', 'P ∨ R'], conclusion: 'Q ∨ S' },
+      'ex53-disj-or-elim': { slug: 'or-elim-flat',
+        premises: ['P ∨ Q', 'P → R', 'Q → R'], conclusion: 'R' },
+      'ex54-cond-and-split': { slug: 'cond-and-split',
+        premises: ['P → (Q · R)'], conclusion: '(P → Q) · (P → R)' },
+      'ex55-cond-and-join': { slug: 'cond-and-join',
+        premises: ['(P → Q) · (P → R)'], conclusion: 'P → (Q · R)' },
+      'ex56-bicond-symm': { slug: 'bicond-symm',
+        premises: ['P ↔ Q'], conclusion: 'Q ↔ P' },
+      'ex57-bicond-neg': { slug: 'bicond-neg',
+        premises: ['P ↔ Q'], conclusion: '¬P ↔ ¬Q' },
+      'ex58-demorgan-or': { slug: 'demorgan-or-2',
+        premises: ['¬P · ¬Q'], conclusion: '¬(P ∨ Q)' },
+      'ex59-demorgan-or-rev': { slug: 'demorgan-or-rev',
+        premises: ['¬(P ∨ Q)'], conclusion: '¬P · ¬Q' },
+      'ex60-bicond-chain': { slug: 'bicond-chain',
+        premises: ['P ↔ Q', 'Q ↔ R'], conclusion: 'P ↔ R' },
+
+      // ── 61–72: Harder multi-step ─────────────────────────────────────────────
+      'ex61-cond-disj': { slug: 'cond-disj',
+        premises: ['P → (Q ∨ R)', 'P · ¬Q'], conclusion: 'R' },
+      'ex62-or-to-cond': { slug: 'or-to-cond',
+        premises: ['(P ∨ Q) → R'], conclusion: 'P → R' },
+      'ex63-or-split-cond': { slug: 'or-split-cond',
+        premises: ['(P ∨ Q) → R'], conclusion: '(P → R) · (Q → R)' },
+      'ex64-cond-or-out': { slug: 'cond-or-out',
+        premises: ['(P → Q) ∨ (P → R)'], conclusion: 'P → (Q ∨ R)' },
+      'ex65-bicond-iff-expand': { slug: 'bicond-expand',
+        premises: ['P ↔ Q'], conclusion: '(P · Q) ∨ (¬P · ¬Q)' },
+      'ex66-bicond-iff-contract': { slug: 'bicond-contract',
+        premises: ['(P · Q) ∨ (¬P · ¬Q)'], conclusion: 'P ↔ Q' },
+      'ex67-neg-cond': { slug: 'neg-cond',
+        premises: ['¬(P → Q)'], conclusion: 'P · ¬Q' },
+      'ex68-neg-cond-rev': { slug: 'neg-cond-rev',
+        premises: ['P · ¬Q'], conclusion: '¬(P → Q)' },
+      'ex69-constr-dilemma-2': { slug: 'full-constr-dilemma',
+        premises: ['P → Q', 'R → S', 'P ∨ R'], conclusion: 'Q ∨ S' },
+      'ex70-cond-neg-or': { slug: 'cond-neg-or',
+        premises: ['P → Q'], conclusion: '¬P ∨ Q' },
+      'ex71-neg-or-cond': { slug: 'neg-or-cond',
+        premises: ['¬P ∨ Q'], conclusion: 'P → Q' },
+      'ex72-resolution': { slug: 'resolution',
+        premises: ['P ∨ Q', '¬P ∨ R'], conclusion: 'Q ∨ R' },
+
+      // ── 73–84: Complex ───────────────────────────────────────────────────────
+      'ex73-disj-assoc-l': { slug: 'disj-assoc-l',
+        premises: ['P ∨ (Q ∨ R)'], conclusion: '(P ∨ Q) ∨ R' },
+      'ex74-disj-assoc-r': { slug: 'disj-assoc-r',
+        premises: ['(P ∨ Q) ∨ R'], conclusion: 'P ∨ (Q ∨ R)' },
+      'ex75-disj-dist': { slug: 'disj-dist',
+        premises: ['P ∨ (Q · R)'], conclusion: '(P ∨ Q) · (P ∨ R)' },
+      'ex76-disj-dist-rev': { slug: 'disj-dist-rev',
+        premises: ['(P ∨ Q) · (P ∨ R)'], conclusion: 'P ∨ (Q · R)' },
+      'ex77-cond-contra': { slug: 'cond-contra',
+        premises: ['P → Q', '¬(P · Q) → R'], conclusion: 'P → R' },
+      'ex78-mixed-neg': { slug: 'mixed-neg',
+        premises: ['(P · Q) → ¬R', 'R'], conclusion: '¬P ∨ ¬Q' },
+      'ex79-cond-rearrange': { slug: 'cond-rearrange',
+        premises: ['P → Q', '¬P → Q'], conclusion: 'Q' },
+      'ex80-bicond-contr': { slug: 'bicond-contr',
+        premises: ['P ↔ Q', 'P ↔ ¬Q'], conclusion: 'R' },
+      'ex81-demorgan-hard': { slug: 'demorgan-hard',
+        premises: ['¬(P · Q)'], conclusion: '¬P ∨ ¬Q' },
+      'ex82-disj-neg': { slug: 'disj-neg',
+        premises: ['P ∨ Q'], conclusion: '¬(¬P · ¬Q)' },
+      'ex83-neg-disj': { slug: 'neg-disj',
+        premises: ['¬(P ∨ Q)'], conclusion: '¬P · ¬Q' },
+      'ex84-chain-bicond': { slug: 'chain-bicond',
+        premises: ['P ↔ Q', 'R ↔ S', 'P · R'], conclusion: 'Q · S' },
+
+      // ── 85–96: Hardest (classical tautologies and Peirce-class) ─────────────
+      'ex85-lem': { slug: 'lem',
+        premises: [], conclusion: 'P ∨ ¬P' },
+      'ex86-dn-taut': { slug: 'dn-taut',
+        premises: [], conclusion: '¬¬P → P' },
+      'ex87-contra-taut': { slug: 'contra-taut',
+        premises: [], conclusion: '(P → Q) → (¬Q → ¬P)' },
+      'ex88-neg-conj-taut': { slug: 'neg-conj-taut',
+        premises: [], conclusion: '¬(P · ¬P)' },
+      'ex89-cond-disj-taut': { slug: 'cond-disj-taut',
+        premises: [], conclusion: '(P → Q) ∨ (Q → P)' },
+      'ex90-bicond-neg-taut': { slug: 'bicond-neg-taut',
+        premises: [], conclusion: '(P ↔ Q) → (¬P ↔ ¬Q)' },
+      'ex91-neg-bicond': { slug: 'neg-bicond',
+        premises: ['¬(P ↔ Q)'], conclusion: 'P ↔ ¬Q' },
+      'ex92-neg-bicond-rev': { slug: 'neg-bicond-rev',
+        premises: ['P ↔ ¬Q'], conclusion: '¬(P ↔ Q)' },
+      'ex93-iff-rearrange': { slug: 'iff-rearrange',
+        premises: ['(P ↔ Q) · (R ↔ S)', '¬Q ∨ ¬S'], conclusion: '¬P ∨ ¬R' },
+      'ex94-neg-mp': { slug: 'neg-mp',
+        premises: ['¬P → P'], conclusion: 'P' },
+      'ex95-peirce': { slug: 'peirce',
+        premises: ['(P → Q) → P'], conclusion: 'P' },
+      'ex96-peirce-taut': { slug: 'peirce-taut',
+        premises: [], conclusion: '((P → Q) → P) → P' }
     };
     // ═══════════════════════════════════════════════════════════════════════════
     // RULE CONFIGURATIONS
     // ═══════════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════════
+    // COMPLETION HASHES
+    // Static 12-digit codes, one per example. Shown in the congrats modal when
+    // hashesEnabled is on. Keep this list private — it is the answer key.
+    // ═══════════════════════════════════════════════════════════════════════════
+    const completionHashes = {
+      'ex1-andelim-mp':        '847293016584',
+      'ex2-andintro-mp':       '310957284619',
+      'ex3-chain-mp':          '592840173625',
+      'ex4-orelim-chain':      '748291035847',
+      'ex5-cond-compose':      '193847562091',
+      'ex6-contraposition':    '628475910284',
+      'ex7-pbc-neg':           '471836295047',
+      'ex8-orelim-explosion':  '905638241795',
+      'ex9-bicond-trans':      '382759104836',
+      'ex10-nested-cond':      '716483920571',
+      'ex11-demorgan':         '259403817625',
+      'ex12-cond-to-conj':     '834710295638',
+      'ex13-conj-comm':        '107364825910',
+      'ex14-disj-intro-left':  '573829401736',
+      'ex15-disj-intro-right': '486920173548',
+      'ex16-bicond-mp':        '920471638205',
+      'ex17-bicond-mt':        '364815927304',
+      'ex18-disj-syll':        '751930284617',
+      'ex19-absorption':       '283641097583',
+      'ex20-conj-assoc':       '619374850219',
+      'ex21-disj-comm':        '437802615943',
+      'ex22-iff-intro':        '875193064827',
+      'ex23-neg-neg-intro':    '502947183650',
+      'ex24-neg-neg-elim':     '148263759408',
+      'ex25-conj-multi':       '793510462897',
+      'ex26-conj-assoc-r':     '361849207531',
+      'ex27-conj-rearrange':   '924708153629',
+      'ex28-conj-extract':     '547031896425',
+      'ex29-conj-four':        '219486730512',
+      'ex30-cond-mp-chain':    '684027395148',
+      'ex31-bicond-use':       '073951826403',
+      'ex32-bicond-rev':       '815374092681',
+      'ex33-explosion-conj':   '492806153749',
+      'ex34-explosion-cond':   '736290481536',
+      'ex35-triple-neg':       '158437960215',
+      'ex36-disj-add':         '603748219360',
+      'ex37-cond-from-conj':   '947163508274',
+      'ex38-const-to-cond':    '325890741632',
+      'ex39-self-cond':        '861047395286',
+      'ex40-self-dist':        '479213680947',
+      'ex41-exportation':      '234961870423',
+      'ex42-importation':      '780435291780',
+      'ex43-cond-swap':        '513697042513',
+      'ex44-disj-to-cond':     '096824731509',
+      'ex45-demorgan-conj':    '648307195264',
+      'ex46-neg-from-conds':   '972541863097',
+      'ex47-neg-self':         '415780239641',
+      'ex48-cond-to-cond':     '837052946183',
+      'ex49-distributive':     '260419873526',
+      'ex50-distribution-rev': '594736081295',
+      'ex51-hyp-disj':         '128953470512',
+      'ex52-constructive-dilemma': '703481625370',
+      'ex53-disj-or-elim':     '389067214538',
+      'ex54-cond-and-split':   '946215378094',
+      'ex55-cond-and-join':    '571830462957',
+      'ex56-bicond-symm':      '214697035821',
+      'ex57-bicond-neg':       '638054179263',
+      'ex58-demorgan-or':      '807431596280',
+      'ex59-demorgan-or-rev':  '453918027645',
+      'ex60-bicond-chain':     '129374860512',
+      'ex61-cond-disj':        '784026153978',
+      'ex62-or-to-cond':       '340591728634',
+      'ex63-or-split-cond':    '917843056291',
+      'ex64-cond-or-out':      '563720491856',
+      'ex65-bicond-iff-expand':'198437062519',
+      'ex66-bicond-iff-contract':'726804139527',
+      'ex67-neg-cond':         '452190873645',
+      'ex68-neg-cond-rev':     '893614025789',
+      'ex69-constr-dilemma-2': '317259480631',
+      'ex70-cond-neg-or':      '640873951264',
+      'ex71-neg-or-cond':      '259047136825',
+      'ex72-resolution':       '731580294173',
+      'ex73-disj-assoc-l':     '085463917208',
+      'ex74-disj-assoc-r':     '416837052041',
+      'ex75-disj-dist':        '972053681497',
+      'ex76-disj-dist-rev':    '524796130852',
+      'ex77-cond-contra':      '861374290568',
+      'ex78-mixed-neg':        '309218647530',
+      'ex79-cond-rearrange':   '647891023764',
+      'ex80-bicond-contr':     '193520764391',
+      'ex81-demorgan-hard':    '870435192687',
+      'ex82-disj-neg':         '435961807243',
+      'ex83-neg-disj':         '712348590271',
+      'ex84-chain-bicond':     '068295471306',
+      'ex85-lem':              '953870214695',
+      'ex86-dn-taut':          '281463790528',
+      'ex87-contra-taut':      '617034852961',
+      'ex88-neg-conj-taut':    '394728015839',
+      'ex89-cond-disj-taut':   '740816293470',
+      'ex90-bicond-neg-taut':  '526049371852',
+      'ex91-neg-bicond':       '163785024916',
+      'ex92-neg-bicond-rev':   '849302167584',
+      'ex93-iff-rearrange':    '437651890243',
+      'ex94-neg-mp':           '910273645091',
+      'ex95-peirce':           '358426071935',
+      'ex96-peirce-taut':      '674913850267'
+    };
+
     const ruleConfigs = {
       '→E': {
         title: '→E (Conditional Elimination)',
@@ -3878,9 +4084,15 @@ function checkGuidedCompletion() {
 
 function showCongratsModal() {
   const concl = conclusionAst ? renderFormula(conclusionAst) : '';
+  const hashLine = (() => {
+    if (!hashesEnabled) return '';
+    const code = completionHashes[currentExample] || '';
+    if (!code) return '';
+    return `<div class="modal-hash-box">Completion code: <span class="modal-hash">${code}</span></div>`;
+  })();
   showProofModal(
     '✨ Proof complete!',
-    `You’ve successfully derived <span class="modal-formula">${escapeHtml(concl)}</span> from the premises.`,
+    `You've successfully derived <span class="modal-formula">${escapeHtml(concl)}</span> from the premises.${hashLine}`,
     [
       { label: 'Back to menu', primary: false, action: () => showPage('landing-page') },
       { label: 'Return to proof', primary: true, extraClass: 'purple', action: () => {} }
@@ -6129,6 +6341,7 @@ document.getElementById('add-blank-btn').addEventListener('click', () => {
     let interactionLog   = [];   // array of event objects
     let logStartTime     = null; // Date.now() at proof start
     let loggingEnabled   = true; // toggled by settings checkbox
+    let hashesEnabled    = false; // toggled by settings checkbox — off by default
 
     // Preambles explain the mode's constraints so an AI can interpret the log correctly.
     const LOG_PREAMBLES = {
@@ -6788,6 +7001,19 @@ document.getElementById('add-blank-btn').addEventListener('click', () => {
               ? 'Interaction logging is <strong>on</strong>. Your proof steps are recorded locally so you can export them for review. You can turn this off in ⚙️ Settings.'
               : 'Interaction logging is <strong>off</strong>. Steps will not be recorded. You can turn this on in ⚙️ Settings.';
           }
+        });
+      }
+
+      // Completion code (hash) toggle
+      const hashToggle = document.getElementById('hash-toggle');
+      if (hashToggle) {
+        try {
+          const savedHash = localStorage.getItem('proofapp-hashes');
+          if (savedHash === 'on') { hashesEnabled = true; hashToggle.checked = true; }
+        } catch(_) {}
+        hashToggle.addEventListener('change', () => {
+          hashesEnabled = hashToggle.checked;
+          try { localStorage.setItem('proofapp-hashes', hashesEnabled ? 'on' : 'off'); } catch(_) {}
         });
       }
 
