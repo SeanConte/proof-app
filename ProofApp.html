@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<!-- ProofApp16_0: expanded to 96 examples (hard ones grouped at end);
-     12-digit static completion hash per example; hash display toggle in settings -->
+<!-- ProofApp17_3: rule grid order ¬/∨/·/→/↔ intro+elim; fix ↔E inspection highlight;
+     dashed subproof block borders; fix autocomplete not ending full proof early;
+     fix reit-deletion reverting goal; builder defaults to conclusion; example fixes, reit candidate color red; + Line inserts before subproof goal
+     when inside subproof with no target, or after last top-level line -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1365,6 +1367,24 @@
   
     .proof-line.blank .line-formula { border-bottom: 1px dashed #777; color: #777; font-style: italic; }
     .proof-line.goal.unfilled .line-formula { font-style: italic; color: #888; }
+
+    /* ── Subproof block wrappers ── */
+    .subproof-block {
+      border: 2px dashed #888;
+      margin: 5px 0 5px 0;
+      padding: 2px 0;
+      position: relative;
+    }
+    /* Adjacent sibling subproofs get a small gap so borders don't touch */
+    .subproof-block + .subproof-block {
+      margin-top: 6px;
+    }
+    /* Nested subproofs indent slightly on the left */
+    .subproof-block .subproof-block {
+      border-color: #666;
+      margin-left: 8px;
+      margin-right: 0;
+    }
     .proof-line.target-active { outline: 2px solid #0a84ff; outline-offset: -2px; }
     .proof-line.selected-inspect { outline: 2px solid #7a3df0; outline-offset: -2px; }
     .hl-red { color: #c70000; font-weight: 600; }
@@ -2178,16 +2198,16 @@
           <!-- Rules Toolbox -->
           <div class="rules-toolbox">
             <div class="rules-grid">
-              <button class="rule-btn rule-tooltip-anchor" data-rule="→I"><span class="rule-btn-symbol" data-sym="→">→</span><span class="rule-btn-label">Intro</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-subproof"><span class="tt-line"><span class="tt-red">φ</span></span><span class="tt-line">  ⋮</span><span class="tt-line"><span class="tt-green">ψ</span></span></span><span class="tt-conc"><span class="tt-red">φ</span> → <span class="tt-green">ψ</span></span></div></div></div></button>
-              <button class="rule-btn rule-tooltip-anchor" data-rule="·I"><span class="rule-btn-symbol" data-sym="·">·</span><span class="rule-btn-label">Intro</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span></span><span class="tt-line"><span class="tt-green">ψ</span></span><span class="tt-conc"><span class="tt-red">φ</span> · <span class="tt-green">ψ</span></span></div></div></div></button>
-              <button class="rule-btn rule-tooltip-anchor" data-rule="∨I"><span class="rule-btn-symbol" data-sym="∨">∨</span><span class="rule-btn-label">Intro</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span></span><span class="tt-conc"><span class="tt-red">φ</span> ∨ <span class="tt-green">ψ</span></span></div><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-green">ψ</span></span><span class="tt-conc"><span class="tt-red">φ</span> ∨ <span class="tt-green">ψ</span></span></div></div></div></button>
-              <button class="rule-btn rule-tooltip-anchor" data-rule="↔I"><span class="rule-btn-symbol" data-sym="↔">↔</span><span class="rule-btn-label">Intro</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-subproof"><span class="tt-line"><span class="tt-red">φ</span></span><span class="tt-line">  ⋮</span><span class="tt-line"><span class="tt-green">ψ</span></span></span><span class="tt-subproof"><span class="tt-line"><span class="tt-green">ψ</span></span><span class="tt-line">  ⋮</span><span class="tt-line"><span class="tt-red">φ</span></span></span><span class="tt-conc"><span class="tt-red">φ</span> ↔ <span class="tt-green">ψ</span></span></div></div></div></button>
               <button class="rule-btn rule-tooltip-anchor" data-rule="¬I"><span class="rule-btn-symbol" data-sym="¬">¬</span><span class="rule-btn-label">Intro</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-subproof"><span class="tt-line"><span class="tt-green">φ</span></span><span class="tt-line">  ⋮</span><span class="tt-line"><span class="tt-red">ψ</span> · <span class="tt-red">¬ψ</span></span></span><span class="tt-conc">¬<span class="tt-green">φ</span></span></div></div></div></button>
-              <button class="rule-btn rule-tooltip-anchor" data-rule="→E"><span class="rule-btn-symbol" data-sym="→">→</span><span class="rule-btn-label">Elim</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span> → <span class="tt-green">ψ</span></span><span class="tt-line"><span class="tt-red">φ</span></span><span class="tt-conc"><span class="tt-green">ψ</span></span></div></div></div></button>
-              <button class="rule-btn rule-tooltip-anchor" data-rule="·E"><span class="rule-btn-symbol" data-sym="·">·</span><span class="rule-btn-label">Elim</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span> · <span class="tt-green">ψ</span></span><span class="tt-conc"><span class="tt-red">φ</span></span></div><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span> · <span class="tt-green">ψ</span></span><span class="tt-conc"><span class="tt-green">ψ</span></span></div></div></div></button>
-              <button class="rule-btn rule-tooltip-anchor" data-rule="∨E"><span class="rule-btn-symbol" data-sym="∨">∨</span><span class="rule-btn-label">Elim</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span> ∨ <span class="tt-green">ψ</span></span><span class="tt-subproof"><span class="tt-line"><span class="tt-red">φ</span></span><span class="tt-line">  ⋮</span><span class="tt-line"><span class="tt-purple">θ</span></span></span><span class="tt-subproof"><span class="tt-line"><span class="tt-green">ψ</span></span><span class="tt-line">  ⋮</span><span class="tt-line"><span class="tt-purple">θ</span></span></span><span class="tt-conc"><span class="tt-purple">θ</span></span></div></div></div></button>
-              <button class="rule-btn rule-tooltip-anchor" data-rule="↔E"><span class="rule-btn-symbol" data-sym="↔">↔</span><span class="rule-btn-label">Elim</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span> ↔ <span class="tt-green">ψ</span></span><span class="tt-line"><span class="tt-red">φ</span></span><span class="tt-conc"><span class="tt-green">ψ</span></span></div><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span> ↔ <span class="tt-green">ψ</span></span><span class="tt-line"><span class="tt-green">ψ</span></span><span class="tt-conc"><span class="tt-red">φ</span></span></div></div></div></button>
+              <button class="rule-btn rule-tooltip-anchor" data-rule="∨I"><span class="rule-btn-symbol" data-sym="∨">∨</span><span class="rule-btn-label">Intro</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span></span><span class="tt-conc"><span class="tt-red">φ</span> ∨ <span class="tt-green">ψ</span></span></div><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-green">ψ</span></span><span class="tt-conc"><span class="tt-red">φ</span> ∨ <span class="tt-green">ψ</span></span></div></div></div></button>
+              <button class="rule-btn rule-tooltip-anchor" data-rule="·I"><span class="rule-btn-symbol" data-sym="·">·</span><span class="rule-btn-label">Intro</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span></span><span class="tt-line"><span class="tt-green">ψ</span></span><span class="tt-conc"><span class="tt-red">φ</span> · <span class="tt-green">ψ</span></span></div></div></div></button>
+              <button class="rule-btn rule-tooltip-anchor" data-rule="→I"><span class="rule-btn-symbol" data-sym="→">→</span><span class="rule-btn-label">Intro</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-subproof"><span class="tt-line"><span class="tt-red">φ</span></span><span class="tt-line">  ⋮</span><span class="tt-line"><span class="tt-green">ψ</span></span></span><span class="tt-conc"><span class="tt-red">φ</span> → <span class="tt-green">ψ</span></span></div></div></div></button>
+              <button class="rule-btn rule-tooltip-anchor" data-rule="↔I"><span class="rule-btn-symbol" data-sym="↔">↔</span><span class="rule-btn-label">Intro</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-subproof"><span class="tt-line"><span class="tt-red">φ</span></span><span class="tt-line">  ⋮</span><span class="tt-line"><span class="tt-green">ψ</span></span></span><span class="tt-subproof"><span class="tt-line"><span class="tt-green">ψ</span></span><span class="tt-line">  ⋮</span><span class="tt-line"><span class="tt-red">φ</span></span></span><span class="tt-conc"><span class="tt-red">φ</span> ↔ <span class="tt-green">ψ</span></span></div></div></div></button>
               <button class="rule-btn rule-tooltip-anchor" data-rule="¬E"><span class="rule-btn-symbol" data-sym="¬">¬</span><span class="rule-btn-label">Elim</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-line">¬¬<span class="tt-green">φ</span></span><span class="tt-conc"><span class="tt-green">φ</span></span></div></div></div></button>
+              <button class="rule-btn rule-tooltip-anchor" data-rule="∨E"><span class="rule-btn-symbol" data-sym="∨">∨</span><span class="rule-btn-label">Elim</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span> ∨ <span class="tt-green">ψ</span></span><span class="tt-subproof"><span class="tt-line"><span class="tt-red">φ</span></span><span class="tt-line">  ⋮</span><span class="tt-line"><span class="tt-purple">θ</span></span></span><span class="tt-subproof"><span class="tt-line"><span class="tt-green">ψ</span></span><span class="tt-line">  ⋮</span><span class="tt-line"><span class="tt-purple">θ</span></span></span><span class="tt-conc"><span class="tt-purple">θ</span></span></div></div></div></button>
+              <button class="rule-btn rule-tooltip-anchor" data-rule="·E"><span class="rule-btn-symbol" data-sym="·">·</span><span class="rule-btn-label">Elim</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span> · <span class="tt-green">ψ</span></span><span class="tt-conc"><span class="tt-red">φ</span></span></div><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span> · <span class="tt-green">ψ</span></span><span class="tt-conc"><span class="tt-green">ψ</span></span></div></div></div></button>
+              <button class="rule-btn rule-tooltip-anchor" data-rule="→E"><span class="rule-btn-symbol" data-sym="→">→</span><span class="rule-btn-label">Elim</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span> → <span class="tt-green">ψ</span></span><span class="tt-line"><span class="tt-red">φ</span></span><span class="tt-conc"><span class="tt-green">ψ</span></span></div></div></div></button>
+              <button class="rule-btn rule-tooltip-anchor" data-rule="↔E"><span class="rule-btn-symbol" data-sym="↔">↔</span><span class="rule-btn-label">Elim</span><div class="rule-tooltip"><div class="rule-tooltip-inner"><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span> ↔ <span class="tt-green">ψ</span></span><span class="tt-line"><span class="tt-red">φ</span></span><span class="tt-conc"><span class="tt-green">ψ</span></span></div><div class="rule-tooltip-box"><span class="tt-line"><span class="tt-red">φ</span> ↔ <span class="tt-green">ψ</span></span><span class="tt-line"><span class="tt-green">ψ</span></span><span class="tt-conc"><span class="tt-red">φ</span></span></div></div></div></button>
             </div>
 
             <div class="auxiliary-rules">
@@ -2794,10 +2814,10 @@ function extractAtomicsFromAst(ast, out = []) {
       // ── 13–24: Connective basics ─────────────────────────────────────────────
       'ex13-conj-comm': { slug: 'conj-comm',
         premises: ['P · Q'], conclusion: 'Q · P' },
-      'ex14-disj-intro-left': { slug: 'disj-intro-l',
-        premises: ['P'], conclusion: 'P ∨ Q' },
-      'ex15-disj-intro-right': { slug: 'disj-intro-r',
-        premises: ['Q'], conclusion: 'P ∨ Q' },
+      'ex14-disj-from-conj-l': { slug: 'disj-from-conj-l',
+        premises: ['P · Q'], conclusion: 'P ∨ R' },
+      'ex15-disj-from-conj-r': { slug: 'disj-from-conj-r',
+        premises: ['P · Q'], conclusion: 'R ∨ Q' },
       'ex16-bicond-mp': { slug: 'bicond-mp',
         premises: ['P ↔ Q', 'P'], conclusion: 'Q' },
       'ex17-bicond-mt': { slug: 'bicond-mt',
@@ -2830,10 +2850,10 @@ function extractAtomicsFromAst(ast, out = []) {
         premises: ['(P · Q) · (R · S)'], conclusion: 'Q · R' },
       'ex30-cond-mp-chain': { slug: 'cond-mp-chain',
         premises: ['P → (Q → R)', 'P · Q'], conclusion: 'R' },
-      'ex31-bicond-use': { slug: 'bicond-use',
-        premises: ['P ↔ Q', 'P'], conclusion: 'Q' },
-      'ex32-bicond-rev': { slug: 'bicond-rev',
-        premises: ['P ↔ Q', 'Q'], conclusion: 'P' },
+      'ex31-bicond-chain-conj': { slug: 'bicond-chain-conj',
+        premises: ['P ↔ Q', 'Q ↔ R', 'P'], conclusion: 'R' },
+      'ex32-bicond-conj-use': { slug: 'bicond-conj-use',
+        premises: ['(P · Q) ↔ R', 'P', 'Q'], conclusion: 'R' },
       'ex33-explosion-conj': { slug: 'expl-conj',
         premises: ['P', '¬P'], conclusion: 'Q · R' },
       'ex34-explosion-cond': { slug: 'expl-cond',
@@ -2964,10 +2984,10 @@ function extractAtomicsFromAst(ast, out = []) {
         premises: ['¬(P ↔ Q)'], conclusion: 'P ↔ ¬Q' },
       'ex92-neg-bicond-rev': { slug: 'neg-bicond-rev',
         premises: ['P ↔ ¬Q'], conclusion: '¬(P ↔ Q)' },
-      'ex93-iff-rearrange': { slug: 'iff-rearrange',
-        premises: ['(P ↔ Q) · (R ↔ S)', '¬Q ∨ ¬S'], conclusion: '¬P ∨ ¬R' },
-      'ex94-neg-mp': { slug: 'neg-mp',
-        premises: ['¬P → P'], conclusion: 'P' },
+      'ex93-big-chain': { slug: 'big-chain',
+        premises: ['P → Q', 'Q → R', 'R → S', 'S → T', 'P'], conclusion: 'T' },
+      'ex94-messy-mix': { slug: 'messy-mix',
+        premises: ['(P · Q) → R', 'P ∨ S', '¬S', 'Q', 'R → T'], conclusion: 'T' },
       'ex95-peirce': { slug: 'peirce',
         premises: ['(P → Q) → P'], conclusion: 'P' },
       'ex96-peirce-taut': { slug: 'peirce-taut',
@@ -3012,8 +3032,8 @@ function extractAtomicsFromAst(ast, out = []) {
       'ex28-conj-extract':     '547031896425',
       'ex29-conj-four':        '219486730512',
       'ex30-cond-mp-chain':    '684027395148',
-      'ex31-bicond-use':       '073951826403',
-      'ex32-bicond-rev':       '815374092681',
+      'ex31-bicond-chain-conj':'073951826403',
+      'ex32-bicond-conj-use':  '815374092681',
       'ex33-explosion-conj':   '492806153749',
       'ex34-explosion-cond':   '736290481536',
       'ex35-triple-neg':       '158437960215',
@@ -3074,8 +3094,8 @@ function extractAtomicsFromAst(ast, out = []) {
       'ex90-bicond-neg-taut':  '526049371852',
       'ex91-neg-bicond':       '163785024916',
       'ex92-neg-bicond-rev':   '849302167584',
-      'ex93-iff-rearrange':    '437651890243',
-      'ex94-neg-mp':           '910273645091',
+      'ex93-big-chain':        '437651890243',
+      'ex94-messy-mix':        '910273645091',
       'ex95-peirce':           '358426071935',
       'ex96-peirce-taut':      '674913850267'
     };
@@ -3395,6 +3415,11 @@ function extractAtomicsFromAst(ast, out = []) {
             document.getElementById('lp-builder-preview').className = 'builder-preview empty';
             document.getElementById('overlay-builder-label').textContent = 'Formula Builder';
             showOverlayView('custom');
+            // Auto-focus the conclusion slot so the builder is live immediately
+            setTimeout(() => {
+              const concBtn = document.getElementById('overlay-conclusion-btn');
+              if (concBtn) concBtn.click();
+            }, 0);
           } else {
             selectExample(key);
             closeExampleOverlay();
@@ -3869,8 +3894,8 @@ function appendProofLine(lineObj) {
   return lineObj.number;
 }
 
-function makeLine({ kind='normal', ast=null, targetAst=null, justification='', level=0, isPremise=false }) {
-  const scopePath = activeSubproofs.map(s => s.id);
+function makeLine({ kind='normal', ast=null, targetAst=null, justification='', level=0, isPremise=false, scopePathOverride=null }) {
+  const scopePath = scopePathOverride !== null ? scopePathOverride : activeSubproofs.map(s => s.id);
   return {
     uid: 'L' + (nextUid++),
     number: 0,
@@ -3884,7 +3909,7 @@ function makeLine({ kind='normal', ast=null, targetAst=null, justification='', l
   };
 }
 
-function addProofLine(formulaOrAst, justification, level, isPremise = false, kind='normal', targetAst=null, insertIndex=null) {
+function addProofLine(formulaOrAst, justification, level, isPremise = false, kind='normal', targetAst=null, insertIndex=null, scopePathOverride=null) {
   let ast = null;
   if (formulaOrAst !== null && formulaOrAst !== undefined) {
     ast = (typeof formulaOrAst === 'string') ? parseFormulaSafe(formulaOrAst) : formulaOrAst;
@@ -3893,7 +3918,7 @@ function addProofLine(formulaOrAst, justification, level, isPremise = false, kin
       return null;
     }
   }
-  const line = makeLine({ kind, ast, targetAst, justification, level: level || 0, isPremise });
+  const line = makeLine({ kind, ast, targetAst, justification, level: level || 0, isPremise, scopePathOverride });
   if (insertIndex === null || insertIndex === undefined) return appendProofLine(line);
   return insertProofLineAt(insertIndex, line);
 }
@@ -4073,11 +4098,18 @@ function checkGuidedCompletion() {
   if (activeSubproofs.length > 0) return;
   // Include goal lines with a filled ast — the main proof conclusion lives
   // on the main goal line which keeps kind==='goal' even after being filled.
-  const done = proofLines.some(l =>
-    !l.isPremise && l.level === 0 && l.kind !== 'blank' &&
-    !(l.kind === 'goal' && !l.ast) &&
-    l.ast && astEquals(l.ast, conclusionAst)
-  );
+  // Exclude lines still marked as pending (subproof discharge not yet finalized).
+  const done = proofLines.some(l => {
+    if (l.isPremise) return false;
+    if (l.level !== 0) return false;
+    if (l.kind === 'blank') return false;
+    if (l.kind === 'goal' && !l.ast) return false;
+    if (!l.ast || !astEquals(l.ast, conclusionAst)) return false;
+    // Reject lines whose justification is still in pending/pre-fill state
+    if (l.justification && typeof l.justification === 'object' &&
+        l.justification.display && l.justification.display.includes('(pending)')) return false;
+    return true;
+  });
   if (!done) return;
   showCongratsModal();
 }
@@ -4259,7 +4291,11 @@ function autoCompleteSubproof(sourceUid, goalUid) {
   autoAddBlankIfNeeded();
   renderProof();
   clearActiveTarget();
-  checkGuidedCompletion();
+  // Do NOT call checkGuidedCompletion here — the discharge line (e.g. P→Q) has
+  // not been committed yet. The normal commitDerived path will check completion
+  // after the discharge is written. Exception: if we're at level 0 and the main
+  // goal was just filled, check now.
+  if (activeSubproofs.length === 0) checkGuidedCompletion();
 }
 
 
@@ -4391,9 +4427,31 @@ function deleteLineCascade(uid) {
   const toDelete = new Set([...all].filter(u => !premiseUids.has(u)));
 
   if (toDelete.size === 0) { return; }
+
+  // Special case: if a line marked for deletion is a subproof GOAL line,
+  // revert it to unfilled instead of deleting it — goal lines must always
+  // remain as placeholders.
+  const toRevert = new Set();
+  toDelete.forEach(u => {
+    const dl = findLineByUid(u);
+    if (dl && dl.kind === 'goal') {
+      toRevert.add(u);
+    }
+  });
+  toRevert.forEach(u => toDelete.delete(u));
+
   toDelete.forEach(u => {
     const dl = findLineByUid(u);
     if (dl && dl.ast) logEvent('delete', { n: dl.number, formula: renderFormula(dl.ast) });
+  });
+
+  // Revert goal lines: clear ast and justification, keep as unfilled placeholder
+  toRevert.forEach(u => {
+    const dl = findLineByUid(u);
+    if (dl) {
+      dl.ast = null;
+      dl.justification = '';
+    }
   });
 
   proofLines = proofLines.filter(l => !toDelete.has(l.uid));
@@ -4649,6 +4707,7 @@ function renderProof() {
   // Rule-specific immediate-source highlighting is now handled entirely by
   // applyInspectionHighlight() called at the end of renderProof.
 
+  const pendingLines = []; // collected before wrapper grouping
   proofLines.forEach(line => {
     const el = document.createElement('div');
     const classes = ['proof-line'];
@@ -4774,13 +4833,59 @@ function renderProof() {
       trash.addEventListener('mouseleave', () => clearDeletePreview());
     }
 
-    container.appendChild(el);
-
-    // Free mode: wire the input field for the actively-edited line
-    if (currentMode === 'free' && freeEditUid === line.uid) {
-      wireFreeLineInput(el.querySelector('.free-line-input'), line.uid);
-    }
+    pendingLines.push({ el, line });
   });
+
+  // ── Group lines into subproof-block wrappers ──────────────────────────────
+  // Strategy: walk the lines in order, tracking the "current subproof id"
+  // (the innermost scope id). When it changes, close the old wrapper and open
+  // a new one. Lines at level 0 go directly into container.
+  {
+    // Build a map: line uid -> deepest scope id (last entry in scopePath)
+    // For lines at level 0, scopeId = null
+    let currentScopeId = null;
+    // scopeId -> wrapper div
+    const wrapperMap = {};
+    // Stack of open scope ids (outermost first)
+    const scopeStack = [];
+
+    function getOrMakeWrapper(scopePath) {
+      // scopePath is array of scope ids, outermost first
+      if (!scopePath || scopePath.length === 0) return container;
+      const outermost = scopePath[0];
+      if (!wrapperMap[outermost]) {
+        const w = document.createElement('div');
+        w.className = 'subproof-block';
+        w.dataset.scopeId = outermost;
+        container.appendChild(w);
+        wrapperMap[outermost] = w;
+      }
+      // Nest inner wrappers
+      let parent = wrapperMap[outermost];
+      for (let i = 1; i < scopePath.length; i++) {
+        const sid = scopePath[i];
+        if (!wrapperMap[sid]) {
+          const w = document.createElement('div');
+          w.className = 'subproof-block';
+          w.dataset.scopeId = sid;
+          parent.appendChild(w);
+          wrapperMap[sid] = w;
+        }
+        parent = wrapperMap[sid];
+      }
+      return parent;
+    }
+
+    pendingLines.forEach(({ el, line }) => {
+      const scopePath = line.scopePath || [];
+      const parent = getOrMakeWrapper(scopePath);
+      parent.appendChild(el);
+      // Free mode: wire the input field for the actively-edited line
+      if (currentMode === 'free' && freeEditUid === line.uid) {
+        wireFreeLineInput(el.querySelector('.free-line-input'), line.uid);
+      }
+    });
+  }
 
   document.getElementById('subproof-level').textContent = 'Level: ' + subproofLevel;
   updateRuleButtonsEnabled();
@@ -4902,8 +5007,11 @@ function applyInspectionHighlight() {
       highlightLine(bic.uid,
         spanL(rf(bic.ast.left)) + ' ' + spanM('↔') + ' ' + spanR(rf(bic.ast.right)));
       const sideIsLeft = astEquals(side.ast, bic.ast.left);
+      // The result is the OTHER side of the biconditional from what was cited
+      const resultIsLeft = astEquals(line.ast, bic.ast.left);
       highlightLine(side.uid, sideIsLeft ? spanL(rf(side.ast)) : spanR(rf(side.ast)));
-      highlightResult(spanR(rf(line.ast)));
+      // Color result to match which side of the bicon it came from
+      highlightResult(resultIsLeft ? spanL(rf(line.ast)) : spanR(rf(line.ast)));
     }
 
   } else if (rule === '¬E') {
@@ -4914,8 +5022,10 @@ function applyInspectionHighlight() {
 
   } else if (rule === 'Reit') {
     if (sLines.length >= 1) {
+      // Source and result are the same formula — both painted red/left so the
+      // color makes clear "this is a direct copy of that"
       highlightLine(sLines[0].uid, spanL(rf(sLines[0].ast)));
-      highlightResult(spanW(rf(line.ast)));
+      highlightResult(spanL(rf(line.ast)));
     }
 
   } else if (rule === 'Expl') {
@@ -5662,7 +5772,8 @@ function isValidForBlank(line, blankId, blankType) {
         }
       }
 
-      el.innerHTML = `<span class="highlight-whole">${escapeHtml(renderFormula(ast))}</span>`;
+      // 'any' type (Reit) — paint left/red to match inspection highlight
+      el.innerHTML = `<span class="highlight-left">${escapeHtml(renderFormula(ast))}</span>`;
     }
     
     function handleLineClick(lineNumber) {
@@ -5717,15 +5828,15 @@ function isValidForBlank(line, blankId, blankType) {
   }
 
   // Otherwise: target-selection / inspection clicks (Phase C)
-  if (line.kind === 'blank' || line.kind === 'goal') {
-    // Selecting a target line clears inspection highlight
+  if (line.kind === 'blank' || (line.kind === 'goal' && !line.ast)) {
+    // Selecting an empty target line clears inspection highlight
     selectedInspectUid = null;
     setActiveTarget(line.uid);
     renderProof();
     return;
   }
 
-  // Allow inspecting any filled line (premise/derived/assumption).
+  // Allow inspecting any filled line (premise/derived/assumption/filled-goal).
   // Single-focus model: inspecting clears any active editable target.
   if (!currentRule) {
     activeTargetUid = null;
@@ -6299,31 +6410,51 @@ function escapeHtml(text) {
     }
   // Insert blank line after selected line (or before current scope goal if none)
 document.getElementById('add-blank-btn').addEventListener('click', () => {
-  // Prefer currently selected target line; otherwise insert before scope goal
+  // If a target line is selected, insert after it at the same level/scope.
+  // If no target selected: find the best level-0 insertion point.
+  //   - Walk backwards from the end to find the last level-0 non-subproof line,
+  //     then insert after it. This places the blank between subproofs correctly.
   const afterUid = activeTargetUid;
-  const goalUid = defaultGoalUidForCurrentScope();
   let insertIdx = null;
-  let lvl = subproofLevel;
+  let lvl = 0;
+  let scopePath = [];
 
   if (afterUid) {
     const idx = indexOfUid(afterUid);
     if (idx >= 0) {
       insertIdx = idx + 1;
-      lvl = proofLines[idx].level;
-    }
-  } else if (goalUid) {
-    const gIdx = indexOfUid(goalUid);
-    if (gIdx >= 0) {
-      insertIdx = gIdx; // before goal
-      lvl = proofLines[gIdx].level;
+      const tl = proofLines[idx];
+      lvl = tl.level;
+      scopePath = tl.scopePath ? [...tl.scopePath] : [];
     }
   }
 
   if (insertIdx === null) {
-    insertIdx = proofLines.length;
+    // No target selected. Two cases:
+    // (A) Inside an active subproof: insert a blank before the subproof's goal line.
+    // (B) At top level: find the last level-0 line and insert after it.
+    if (activeSubproofs.length > 0) {
+      const current = activeSubproofs[activeSubproofs.length - 1];
+      const gIdx = current.goalUid ? indexOfUid(current.goalUid) : -1;
+      if (gIdx >= 0) {
+        insertIdx = gIdx; // before goal
+        lvl = proofLines[gIdx].level;
+        scopePath = proofLines[gIdx].scopePath ? [...proofLines[gIdx].scopePath] : [];
+      }
+    }
+    if (insertIdx === null) {
+      // Top level: find last level-0 line and insert after it
+      let lastTopIdx = -1;
+      for (let i = 0; i < proofLines.length; i++) {
+        if ((proofLines[i].scopePath || []).length === 0) lastTopIdx = i;
+      }
+      insertIdx = lastTopIdx >= 0 ? lastTopIdx + 1 : proofLines.length;
+      lvl = 0;
+      scopePath = [];
+    }
   }
 
-  addProofLine(null, '', lvl, false, 'blank', null, insertIdx);
+  addProofLine(null, '', lvl, false, 'blank', null, insertIdx, scopePath);
   renderProof();
 });
 
