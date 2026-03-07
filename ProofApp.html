@@ -1,8 +1,7 @@
 <!DOCTYPE html>
-<!-- ProofApp17_3: rule grid order ¬/∨/·/→/↔ intro+elim; fix ↔E inspection highlight;
-     dashed subproof block borders; fix autocomplete not ending full proof early;
-     fix reit-deletion reverting goal; builder defaults to conclusion; example fixes, reit candidate color red; + Line inserts before subproof goal
-     when inside subproof with no target, or after last top-level line -->
+<!-- ProofApp17_4: fix stack overflow in collectDeletionGroup (visited set);
+     clear (pending) from discharge line when all sibling subproofs complete;
+     wrap previewDeleteCascade in try/catch -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -4193,6 +4192,26 @@ function commitDerived(ast, justification, supportUids = []) {
     if (current.goalUid === line.uid) {
       activeSubproofs.pop();
       subproofLevel = Math.max(0, subproofLevel - 1);
+
+      // If this subproof's discharge target exists and ALL sibling subproofs
+      // sharing that target now have their goals filled, remove '(pending)'.
+      const reg = subproofRegistry[current.id];
+      if (reg && reg.dischargeTargetUid) {
+        const siblings = subproofsDischargedBy(reg.dischargeTargetUid);
+        const allDone = siblings.every(s => {
+          const gLine = s.goalUid ? findLineByUid(s.goalUid) : null;
+          return gLine && gLine.ast;
+        });
+        if (allDone) {
+          const dischLine = findLineByUid(reg.dischargeTargetUid);
+          if (dischLine && dischLine.justification && typeof dischLine.justification === 'object') {
+            dischLine.justification = {
+              ...dischLine.justification,
+              display: (dischLine.justification.display || '').replace(/\s*\(pending\)/, '')
+            };
+          }
+        }
+      }
     }
   }
 
@@ -4361,8 +4380,10 @@ function subproofsDischargedBy(uid) {
 function collectDeletionGroup(uid) {
   const group = new Set();
 
+  const visitedSubproofs = new Set();
   function addSubproof(reg) {
-    if (!reg) return;
+    if (!reg || visitedSubproofs.has(reg.id)) return;
+    visitedSubproofs.add(reg.id);
     // All lines inside this subproof
     collectSubproofUids(reg.id).forEach(u => group.add(u));
     // The discharge target (e.g. P→Q line outside the subproof)
@@ -4401,7 +4422,13 @@ function collectDeletionGroup(uid) {
 }
 
 function previewDeleteCascade(uid) {
-  const all = collectDeletionGroup(uid);
+  let all;
+  try {
+    all = collectDeletionGroup(uid);
+  } catch(e) {
+    console.error('[previewDeleteCascade] error:', e.message);
+    return;
+  }
   // Don't highlight premises (can't delete them)
   const premiseUids = new Set(proofLines.filter(l => l.isPremise).map(l => l.uid));
   deletePreviewUids = new Set([...all].filter(u => !premiseUids.has(u)));
