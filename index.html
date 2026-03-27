@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<!-- ProofApp18_1: phase headings, cumulative requirements, copyable completion codes
-     clear (pending) from discharge line when all sibling subproofs complete;
-     wrap previewDeleteCascade in try/catch -->
+<!-- ProofApp18_4: removed leftover share-URL helper text
+     ProofApp18_4: phase headings, cumulative requirements, copyable completion codes
+     ProofApp18_0: regrouped examples, numbered arguments, wider chooser -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProofApp18_1</title>
+  <title>ProofApp18_3</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,600;1,400;1,600;1,700&display=swap" rel="stylesheet">
   <style>
@@ -2009,9 +2009,35 @@
       font-family: Tahoma, Verdana, Arial, sans-serif;
     }
 
+    .version-badge {
+      position: fixed;
+      left: 12px;
+      bottom: 10px;
+      z-index: 1200;
+      font-size: 10px;
+      font-weight: normal;
+      letter-spacing: 0.02em;
+      color: #666;
+      opacity: 0.35;
+      background: none;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .settings-help-text {
+      margin-top: 6px;
+      font-size: 10px;
+      color: #555;
+      line-height: 1.35;
+    }
+
 </style>
 </head>
 <body>
+  <div class="version-badge" id="version-badge">v18.4</div>
   <!-- Settings gear (fixed, always visible) -->
   <button class="settings-btn" id="settings-btn-landing" title="Settings">⚙️</button>
   <div class="settings-panel" id="settings-panel">
@@ -2124,6 +2150,7 @@
         <h1>Natural Deduction Proof Assistant</h1>
       </div>
       <div class="landing-body">
+
         <div class="section">
           <label class="section-label">Mode</label>
           <div class="mode-toggle">
@@ -3892,7 +3919,6 @@ function extractAtomicsFromAst(ast, out = []) {
       });
       return map;
     }
-
     // Serialize current proof state to a base64 JSON string
     function serializeProofState() {
       const lines = proofLines.map(l => ({
@@ -4050,7 +4076,15 @@ function extractAtomicsFromAst(ast, out = []) {
           return;
         }
         const url = buildShareUrl();
-        if (!url) return;
+        if (!url) {
+          if (feedback) {
+            feedback.textContent = 'Could not build link.';
+            feedback.style.color = '#c62828';
+            feedback.style.display = 'block';
+            setTimeout(() => { feedback.style.display = 'none'; }, 2600);
+          }
+          return;
+        }
         navigator.clipboard.writeText(url).then(() => {
           if (feedback) {
             feedback.textContent = 'Link copied!';
