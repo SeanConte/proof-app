@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<!-- ProofApp18_4: removed leftover share-URL helper text
+<!-- ProofApp18_5: share links now build from a clean hosted page base (canonical/baseURI/http origin+pathname), with clipboard fallback that does not prompt giant attachment/data URLs
+     ProofApp18_4: removed leftover share-URL helper text
      ProofApp18_4: phase headings, cumulative requirements, copyable completion codes
      ProofApp18_0: regrouped examples, numbered arguments, wider chooser -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProofApp</title>
+  <title>ProofApp18_5</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,600;1,400;1,600;1,700&display=swap" rel="stylesheet">
   <style>
@@ -2037,7 +2038,7 @@
 </style>
 </head>
 <body>
-  <div class="version-badge" id="version-badge">v18.4</div>
+  <div class="version-badge" id="version-badge">v18.5</div>
   <!-- Settings gear (fixed, always visible) -->
   <button class="settings-btn" id="settings-btn-landing" title="Settings">⚙️</button>
   <div class="settings-panel" id="settings-panel">
@@ -4048,13 +4049,71 @@ function extractAtomicsFromAst(ast, out = []) {
       return false;
     }
 
+    function getHostedPageBaseUrl() {
+      try {
+        const canonical = document.querySelector('link[rel="canonical"]')?.href;
+        if (canonical) {
+          const u = new URL(canonical, window.location.href);
+          u.search = '';
+          u.hash = '';
+          return u.toString();
+        }
+      } catch (e) {}
+
+      try {
+        const baseHref = document.querySelector('base[href]')?.href;
+        if (baseHref) {
+          const u = new URL(baseHref, window.location.href);
+          u.search = '';
+          u.hash = '';
+          return u.toString();
+        }
+      } catch (e) {}
+
+      try {
+        if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+          return window.location.origin + window.location.pathname;
+        }
+      } catch (e) {}
+
+      return null;
+    }
+
     // Build a shareable URL for the current proof state
     function buildShareUrl() {
       const encoded = serializeProofState();
       if (!encoded) return null;
-      const url = new URL(window.location.href);
-      url.search = '?state=' + encoded;
+      const base = getHostedPageBaseUrl();
+      if (!base) return null;
+      const url = new URL(base);
+      url.searchParams.set('state', encoded);
       return url.toString();
+    }
+
+    async function copyTextValue(text) {
+      if (!text) return false;
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (e) {}
+
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', 'readonly');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        ta.style.pointerEvents = 'none';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+        const ok = document.execCommand('copy');
+        ta.remove();
+        return !!ok;
+      } catch (e) {
+        return false;
+      }
     }
 
     // Wire share button
@@ -4062,7 +4121,7 @@ function extractAtomicsFromAst(ast, out = []) {
       const btn      = document.getElementById('share-btn');
       const feedback = document.getElementById('share-feedback');
       if (!btn) return;
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         // Only meaningful on proof page with an active proof
         const onProofPage = document.getElementById('proof-page').classList.contains('active');
@@ -4078,24 +4137,20 @@ function extractAtomicsFromAst(ast, out = []) {
         const url = buildShareUrl();
         if (!url) {
           if (feedback) {
-            feedback.textContent = 'Could not build link.';
+            feedback.textContent = 'Could not build hosted-page link.';
             feedback.style.color = '#c62828';
             feedback.style.display = 'block';
             setTimeout(() => { feedback.style.display = 'none'; }, 2600);
           }
           return;
         }
-        navigator.clipboard.writeText(url).then(() => {
-          if (feedback) {
-            feedback.textContent = 'Link copied!';
-            feedback.style.color = '#2e7d32';
-            feedback.style.display = 'block';
-            setTimeout(() => { feedback.style.display = 'none'; }, 2000);
-          }
-        }).catch(() => {
-          // Fallback: show URL in a prompt so user can copy manually
-          prompt('Copy this link:', url);
-        });
+        const copied = await copyTextValue(url);
+        if (feedback) {
+          feedback.textContent = copied ? 'Link copied!' : 'Could not copy link.';
+          feedback.style.color = copied ? '#2e7d32' : '#c62828';
+          feedback.style.display = 'block';
+          setTimeout(() => { feedback.style.display = 'none'; }, copied ? 2000 : 2600);
+        }
         document.getElementById('settings-panel').classList.remove('open');
       });
     }
