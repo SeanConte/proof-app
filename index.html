@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<!-- ProofApp17_4: fix stack overflow in collectDeletionGroup (visited set);
+<!-- ProofApp18_1: phase headings, cumulative requirements, copyable completion codes
      clear (pending) from discharge line when all sibling subproofs complete;
      wrap previewDeleteCascade in try/catch -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProofApp15_0</title>
+  <title>ProofApp18_1</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,600;1,400;1,600;1,700&display=swap" rel="stylesheet">
   <style>
@@ -268,9 +268,9 @@
       background: #fff;
       border: 2px solid #000;
       box-shadow: 4px 4px 0 #000;
-      width: 820px;
-      max-width: 96vw;
-      max-height: 88vh;
+      width: 1380px;
+      max-width: 98vw;
+      max-height: 90vh;
       display: flex;
       flex-direction: column;
     }
@@ -300,10 +300,10 @@
     .example-popup-close:hover { background: #d0d0d0; }
 
     .example-grid {
-      padding: 16px;
+      padding: 18px;
       overflow-y: auto;
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
       grid-auto-rows: auto;
       align-items: stretch;
       gap: 12px;
@@ -1733,6 +1733,25 @@
       display: block;
       margin-top: 4px;
     }
+    .modal-hash-copy {
+      margin-top: 10px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: bold;
+      border: 1px solid #7c3aed;
+      background: #ffffff;
+      color: #5b21b6;
+      cursor: pointer;
+    }
+    .modal-hash-copy:hover {
+      background: #f7f2ff;
+    }
+    .modal-hash-copy-feedback {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #5b21b6;
+      display: none;
+    }
     .proof-modal-actions {
       display: flex; gap: 8px; justify-content: flex-end;
     }
@@ -1953,12 +1972,41 @@
     .proof-modal { position: relative; }
 
 
-    .example-card-name {
-      font-size: 11px;
+    .example-card-index {
+      font-size: 12px;
       font-weight: bold;
-      color: #555;
-      margin-bottom: 4px;
-      font-family: Tahoma, sans-serif;
+      color: #444;
+      margin-bottom: 6px;
+      font-family: Tahoma, Verdana, Arial, sans-serif;
+    }
+
+    .example-category-heading {
+      grid-column: 1 / -1;
+      padding: 10px 12px 4px;
+      border-top: 2px solid #000;
+      margin-top: 2px;
+    }
+
+    .example-category-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #111;
+      font-family: Tahoma, Verdana, Arial, sans-serif;
+      margin-bottom: 2px;
+    }
+
+    .example-category-subtitle {
+      font-size: 12px;
+      font-weight: bold;
+      color: #444;
+      font-family: Tahoma, Verdana, Arial, sans-serif;
+      margin-bottom: 2px;
+    }
+
+    .example-category-detail {
+      font-size: 11px;
+      color: #666;
+      font-family: Tahoma, Verdana, Arial, sans-serif;
     }
 
 </style>
@@ -2781,216 +2829,637 @@ function extractAtomicsFromAst(ast, out = []) {
     // ═══════════════════════════════════════════════════════════════════════════
     // EXAMPLES
     // ═══════════════════════════════════════════════════════════════════════════
+    const exampleSections = [
+      {
+        title: "Phase One",
+        subtitle: "Requires: Basic Rules",
+        details: "Basic rules: • intro, • elim, ¬ elim, ∨ intro",
+        items: [
+          {
+            key: "ex001",
+            slug: "1",
+            number: 1,
+            premises: ["P · Q", "S · R"],
+            conclusion: "P · R"
+          },
+          {
+            key: "ex002",
+            slug: "2",
+            number: 2,
+            premises: ["¬¬P · R", "S"],
+            conclusion: "P · S"
+          },
+          {
+            key: "ex003",
+            slug: "3",
+            number: 3,
+            premises: ["S"],
+            conclusion: "S ∨ ¬Q"
+          },
+          {
+            key: "ex004",
+            slug: "4",
+            number: 4,
+            premises: ["S", "R"],
+            conclusion: "(S ∨ Q) · (P ∨ R)"
+          },
+          {
+            key: "ex005",
+            slug: "5",
+            number: 5,
+            premises: ["P · Q"],
+            conclusion: "Q · P"
+          },
+          {
+            key: "ex006",
+            slug: "6",
+            number: 6,
+            premises: ["P · (Q ∨ R)"],
+            conclusion: "(P · Q) ∨ (P · R)"
+          },
+          {
+            key: "ex007",
+            slug: "7",
+            number: 7,
+            premises: ["(P · Q) · R"],
+            conclusion: "R · P"
+          },
+          {
+            key: "ex008",
+            slug: "8",
+            number: 8,
+            premises: ["¬¬¬P"],
+            conclusion: "¬P"
+          },
+          {
+            key: "ex009",
+            slug: "9",
+            number: 9,
+            premises: ["(P · Q) · (R · S)"],
+            conclusion: "Q · R"
+          },
+          {
+            key: "ex010",
+            slug: "10",
+            number: 10,
+            premises: ["P · (Q · R)"],
+            conclusion: "(P · Q) · R"
+          },
+          {
+            key: "ex011",
+            slug: "11",
+            number: 11,
+            premises: ["(P · Q) · R"],
+            conclusion: "P · (Q · R)"
+          },
+          {
+            key: "ex012",
+            slug: "12",
+            number: 12,
+            premises: ["P · Q"],
+            conclusion: "P ∨ R"
+          },
+          {
+            key: "ex013",
+            slug: "13",
+            number: 13,
+            premises: ["¬¬(¬¬P · Q)", "S"],
+            conclusion: "S · P"
+          },
+        ]
+      },
+      {
+        title: "Phase Two",
+        subtitle: "Requires: Basic Rules + Conditional Rules",
+        details: "Conditional rules: → elim, ↔ elim, → intro, ↔ intro",
+        items: [
+          {
+            key: "ex014",
+            slug: "14",
+            number: 14,
+            premises: ["P · Q", "P → R"],
+            conclusion: "R"
+          },
+          {
+            key: "ex015",
+            slug: "15",
+            number: 15,
+            premises: ["P", "Q", "(P · Q) → R"],
+            conclusion: "R"
+          },
+          {
+            key: "ex016",
+            slug: "16",
+            number: 16,
+            premises: ["(P ∨ Q) → R"],
+            conclusion: "P → R"
+          },
+          {
+            key: "ex017",
+            slug: "17",
+            number: 17,
+            premises: ["(P ∨ Q) → R"],
+            conclusion: "(P → R) · (Q → R)"
+          },
+          {
+            key: "ex018",
+            slug: "18",
+            number: 18,
+            premises: ["P → (Q → R)", "P · Q"],
+            conclusion: "R"
+          },
+          {
+            key: "ex019",
+            slug: "19",
+            number: 19,
+            premises: ["P → Q", "Q → R", "P"],
+            conclusion: "R"
+          },
+          {
+            key: "ex020",
+            slug: "20",
+            number: 20,
+            premises: ["P → Q", "Q → R", "R → S", "S → U", "P"],
+            conclusion: "U"
+          },
+          {
+            key: "ex021",
+            slug: "21",
+            number: 21,
+            premises: ["Q ↔ P", "Q ↔ R", "R"],
+            conclusion: "P"
+          },
+          {
+            key: "ex022",
+            slug: "22",
+            number: 22,
+            premises: ["(P · Q) ↔ (R ∨ S)", "R"],
+            conclusion: "P"
+          },
+          {
+            key: "ex023",
+            slug: "23",
+            number: 23,
+            premises: ["P ↔ Q", "R ↔ S", "P · R"],
+            conclusion: "Q · S"
+          },
+          {
+            key: "ex024",
+            slug: "24",
+            number: 24,
+            premises: ["(P → Q) · (P → R)"],
+            conclusion: "P → (Q · R)"
+          },
+          {
+            key: "ex025",
+            slug: "25",
+            number: 25,
+            premises: ["P ↔ Q", "Q ↔ R"],
+            conclusion: "P ↔ R"
+          },
+          {
+            key: "ex026",
+            slug: "26",
+            number: 26,
+            premises: [],
+            conclusion: "P → P"
+          },
+          {
+            key: "ex027",
+            slug: "27",
+            number: 27,
+            premises: [],
+            conclusion: "¬¬P → P"
+          },
+          {
+            key: "ex028",
+            slug: "28",
+            number: 28,
+            premises: ["P → Q"],
+            conclusion: "P → (P · Q)"
+          },
+          {
+            key: "ex029",
+            slug: "29",
+            number: 29,
+            premises: ["P → Q", "Q → R"],
+            conclusion: "P → R"
+          },
+          {
+            key: "ex030",
+            slug: "30",
+            number: 30,
+            premises: ["P ↔ Q", "Q ↔ R"],
+            conclusion: "P ↔ R"
+          },
+          {
+            key: "ex031",
+            slug: "31",
+            number: 31,
+            premises: ["P ↔ Q"],
+            conclusion: "Q ↔ P"
+          },
+          {
+            key: "ex032",
+            slug: "32",
+            number: 32,
+            premises: ["P · Q"],
+            conclusion: "P → Q"
+          },
+          {
+            key: "ex033",
+            slug: "33",
+            number: 33,
+            premises: ["P → (Q · R)"],
+            conclusion: "(P → Q) · (P → R)"
+          },
+          {
+            key: "ex034",
+            slug: "34",
+            number: 34,
+            premises: ["P → (Q → R)"],
+            conclusion: "(P · Q) → R"
+          },
+          {
+            key: "ex035",
+            slug: "35",
+            number: 35,
+            premises: ["P → (Q → R)"],
+            conclusion: "Q → (P → R)"
+          },
+          {
+            key: "ex036",
+            slug: "36",
+            number: 36,
+            premises: ["P → Q"],
+            conclusion: "(Q → R) → (P → R)"
+          },
+          {
+            key: "ex037",
+            slug: "37",
+            number: 37,
+            premises: [],
+            conclusion: "P → (Q → P)"
+          },
+        ]
+      },
+      {
+        title: "Phase Three",
+        subtitle: "Requires: Basic Rules + Conditional Rules + Final Rules",
+        details: "Final rules: ¬ intro, ∨ elim, reit, explo",
+        items: [
+          {
+            key: "ex038",
+            slug: "38",
+            number: 38,
+            premises: ["P"],
+            conclusion: "¬¬P"
+          },
+          {
+            key: "ex039",
+            slug: "39",
+            number: 39,
+            premises: ["(P · Q) ∨ (P · R)"],
+            conclusion: "P · (Q ∨ R)"
+          },
+          {
+            key: "ex040",
+            slug: "40",
+            number: 40,
+            premises: ["P ∨ Q", "P → R", "Q → R", "R → S"],
+            conclusion: "S"
+          },
+          {
+            key: "ex041",
+            slug: "41",
+            number: 41,
+            premises: ["P ∨ Q", "¬P", "Q → R"],
+            conclusion: "R"
+          },
+          {
+            key: "ex042",
+            slug: "42",
+            number: 42,
+            premises: ["P → (Q ∨ R)", "P · ¬Q"],
+            conclusion: "R"
+          },
+          {
+            key: "ex043",
+            slug: "43",
+            number: 43,
+            premises: ["(P · Q) → R", "P ∨ S", "¬S", "Q", "R → U"],
+            conclusion: "U"
+          },
+          {
+            key: "ex044",
+            slug: "44",
+            number: 44,
+            premises: ["P → Q", "¬Q"],
+            conclusion: "¬P"
+          },
+          {
+            key: "ex045",
+            slug: "45",
+            number: 45,
+            premises: ["P ↔ Q", "¬P"],
+            conclusion: "¬Q"
+          },
+          {
+            key: "ex046",
+            slug: "46",
+            number: 46,
+            premises: ["P ∨ Q"],
+            conclusion: "Q ∨ P"
+          },
+          {
+            key: "ex047",
+            slug: "47",
+            number: 47,
+            premises: ["P ∨ Q", "P → R", "Q → R"],
+            conclusion: "R"
+          },
+          {
+            key: "ex048",
+            slug: "48",
+            number: 48,
+            premises: [],
+            conclusion: "¬(P · ¬P)"
+          },
+          {
+            key: "ex049",
+            slug: "49",
+            number: 49,
+            premises: ["P", "¬P"],
+            conclusion: "Q → R"
+          },
+          {
+            key: "ex050",
+            slug: "50",
+            number: 50,
+            premises: ["P"],
+            conclusion: "Q → P"
+          },
+          {
+            key: "ex051",
+            slug: "51",
+            number: 51,
+            premises: ["P → ¬P"],
+            conclusion: "¬P"
+          },
+          {
+            key: "ex052",
+            slug: "52",
+            number: 52,
+            premises: ["P → Q", "P → ¬Q"],
+            conclusion: "¬P"
+          },
+          {
+            key: "ex053",
+            slug: "53",
+            number: 53,
+            premises: ["P ↔ Q", "P ↔ ¬Q"],
+            conclusion: "R"
+          },
+          {
+            key: "ex054",
+            slug: "54",
+            number: 54,
+            premises: ["(P → Q) ∨ (P → R)"],
+            conclusion: "P → (Q ∨ R)"
+          },
+          {
+            key: "ex055",
+            slug: "55",
+            number: 55,
+            premises: ["(P → Q) · (R → S)", "P ∨ R"],
+            conclusion: "Q ∨ S"
+          },
+          {
+            key: "ex056",
+            slug: "56",
+            number: 56,
+            premises: ["P → R", "Q → R"],
+            conclusion: "(P ∨ Q) → R"
+          },
+          {
+            key: "ex057",
+            slug: "57",
+            number: 57,
+            premises: ["P ∨ (Q ∨ R)"],
+            conclusion: "(P ∨ Q) ∨ R"
+          },
+          {
+            key: "ex058",
+            slug: "58",
+            number: 58,
+            premises: ["(P ∨ Q) ∨ R"],
+            conclusion: "P ∨ (Q ∨ R)"
+          },
+          {
+            key: "ex059",
+            slug: "59",
+            number: 59,
+            premises: ["P ∨ (Q · R)"],
+            conclusion: "(P ∨ Q) · (P ∨ R)"
+          },
+          {
+            key: "ex060",
+            slug: "60",
+            number: 60,
+            premises: ["(P ∨ Q) · (P ∨ R)"],
+            conclusion: "P ∨ (Q · R)"
+          },
+          {
+            key: "ex061",
+            slug: "61",
+            number: 61,
+            premises: ["¬(P ∨ Q)"],
+            conclusion: "¬P · ¬Q"
+          },
+          {
+            key: "ex062",
+            slug: "62",
+            number: 62,
+            premises: ["¬P · ¬Q"],
+            conclusion: "¬(P ∨ Q)"
+          },
+          {
+            key: "ex063",
+            slug: "63",
+            number: 63,
+            premises: ["¬P ∨ Q"],
+            conclusion: "P → Q"
+          },
+          {
+            key: "ex064",
+            slug: "64",
+            number: 64,
+            premises: ["P ∨ Q", "¬P ∨ R"],
+            conclusion: "Q ∨ R"
+          },
+          {
+            key: "ex065",
+            slug: "65",
+            number: 65,
+            premises: ["P → Q"],
+            conclusion: "¬Q → ¬P"
+          },
+          {
+            key: "ex066",
+            slug: "66",
+            number: 66,
+            premises: ["P ↔ Q"],
+            conclusion: "¬P ↔ ¬Q"
+          },
+          {
+            key: "ex067",
+            slug: "67",
+            number: 67,
+            premises: ["P · ¬Q"],
+            conclusion: "¬(P → Q)"
+          },
+          {
+            key: "ex068",
+            slug: "68",
+            number: 68,
+            premises: ["(P · Q) ∨ (¬P · ¬Q)"],
+            conclusion: "P ↔ Q"
+          },
+          {
+            key: "ex069",
+            slug: "69",
+            number: 69,
+            premises: [],
+            conclusion: "(P → Q) → (¬Q → ¬P)"
+          },
+          {
+            key: "ex070",
+            slug: "70",
+            number: 70,
+            premises: [],
+            conclusion: "(P ↔ Q) → (¬P ↔ ¬Q)"
+          },
+        ]
+      },
+      {
+        title: "Phase Four",
+        subtitle: "Requires: Basic Rules + Conditional Rules + Final Rules",
+        details: "Extra tough: mixed applications of everything above",
+        items: [
+          {
+            key: "ex071",
+            slug: "71",
+            number: 71,
+            premises: ["(P · Q) → ¬R", "R"],
+            conclusion: "¬P ∨ ¬Q"
+          },
+          {
+            key: "ex072",
+            slug: "72",
+            number: 72,
+            premises: ["P → Q", "¬(P · Q) → R"],
+            conclusion: "P → R"
+          },
+          {
+            key: "ex073",
+            slug: "73",
+            number: 73,
+            premises: ["P → Q", "¬P → Q"],
+            conclusion: "Q"
+          },
+          {
+            key: "ex074",
+            slug: "74",
+            number: 74,
+            premises: ["¬(P → Q)"],
+            conclusion: "P · ¬Q"
+          },
+          {
+            key: "ex075",
+            slug: "75",
+            number: 75,
+            premises: ["P ↔ Q"],
+            conclusion: "(P · Q) ∨ (¬P · ¬Q)"
+          },
+          {
+            key: "ex076",
+            slug: "76",
+            number: 76,
+            premises: [],
+            conclusion: "P ∨ ¬P"
+          },
+          {
+            key: "ex077",
+            slug: "77",
+            number: 77,
+            premises: ["¬P ∨ ¬Q"],
+            conclusion: "¬(P · Q)"
+          },
+          {
+            key: "ex078",
+            slug: "78",
+            number: 78,
+            premises: ["¬(P · Q)"],
+            conclusion: "¬P ∨ ¬Q"
+          },
+          {
+            key: "ex079",
+            slug: "79",
+            number: 79,
+            premises: ["P ∨ Q"],
+            conclusion: "¬(¬P · ¬Q)"
+          },
+          {
+            key: "ex080",
+            slug: "80",
+            number: 80,
+            premises: ["P → Q"],
+            conclusion: "¬P ∨ Q"
+          },
+          {
+            key: "ex081",
+            slug: "81",
+            number: 81,
+            premises: ["P ↔ ¬Q"],
+            conclusion: "¬(P ↔ Q)"
+          },
+          {
+            key: "ex082",
+            slug: "82",
+            number: 82,
+            premises: ["¬(P ↔ Q)"],
+            conclusion: "P ↔ ¬Q"
+          },
+          {
+            key: "ex083",
+            slug: "83",
+            number: 83,
+            premises: ["(P → Q) → P"],
+            conclusion: "P"
+          },
+          {
+            key: "ex084",
+            slug: "84",
+            number: 84,
+            premises: [],
+            conclusion: "((P → Q) → P) → P"
+          },
+          {
+            key: "ex085",
+            slug: "85",
+            number: 85,
+            premises: [],
+            conclusion: "(P → Q) ∨ (Q → P)"
+          },
+        ]
+      },
+    ];
+
     const examples = {
-      'custom': { premises: [], conclusion: '', _isCustom: true },
-
-      // ── 1–12: Original core set ──────────────────────────────────────────────
-      'ex1-andelim-mp': { slug: 'mp-conj',
-        premises: ['P · Q', 'P → R'], conclusion: 'R' },
-      'ex2-andintro-mp': { slug: 'mp-conj-intro',
-        premises: ['P', 'Q', '(P · Q) → R'], conclusion: 'R' },
-      'ex3-chain-mp': { slug: 'chain-mp',
-        premises: ['P → Q', 'Q → R', 'P'], conclusion: 'R' },
-      'ex4-orelim-chain': { slug: 'or-elim-chain',
-        premises: ['P ∨ Q', 'P → R', 'Q → R', 'R → S'], conclusion: 'S' },
-      'ex5-cond-compose': { slug: 'hypothetical-syll',
-        premises: ['P → Q', 'Q → R'], conclusion: 'P → R' },
-      'ex6-contraposition': { slug: 'contraposition',
-        premises: ['P → Q'], conclusion: '¬Q → ¬P' },
-      'ex7-pbc-neg': { slug: 'neg-intro',
-        premises: ['P → Q', 'P → ¬Q'], conclusion: '¬P' },
-      'ex8-orelim-explosion': { slug: 'or-expl',
-        premises: ['P ∨ Q', '¬P', 'Q → R'], conclusion: 'R' },
-      'ex9-bicond-trans': { slug: 'bicond-trans',
-        premises: ['P ↔ Q', 'Q ↔ R'], conclusion: 'P ↔ R' },
-      'ex10-nested-cond': { slug: 'self-dist',
-        premises: [], conclusion: 'P → (Q → P)' },
-      'ex11-demorgan': { slug: 'demorgan-or',
-        premises: ['¬(P ∨ Q)'], conclusion: '¬P · ¬Q' },
-      'ex12-cond-to-conj': { slug: 'cond-conj',
-        premises: ['P → Q', 'P → R'], conclusion: 'P → (Q · R)' },
-
-      // ── 13–24: Connective basics ─────────────────────────────────────────────
-      'ex13-conj-comm': { slug: 'conj-comm',
-        premises: ['P · Q'], conclusion: 'Q · P' },
-      'ex14-disj-from-conj-l': { slug: 'disj-from-conj-l',
-        premises: ['P · Q'], conclusion: 'P ∨ R' },
-      'ex15-disj-from-conj-r': { slug: 'disj-from-conj-r',
-        premises: ['P · Q'], conclusion: 'R ∨ Q' },
-      'ex16-bicond-mp': { slug: 'bicond-mp',
-        premises: ['P ↔ Q', 'P'], conclusion: 'Q' },
-      'ex17-bicond-mt': { slug: 'bicond-mt',
-        premises: ['P ↔ Q', '¬Q'], conclusion: '¬P' },
-      'ex18-disj-syll': { slug: 'disj-syll',
-        premises: ['P ∨ Q', '¬P'], conclusion: 'Q' },
-      'ex19-absorption': { slug: 'absorption',
-        premises: ['P → Q'], conclusion: 'P → (P · Q)' },
-      'ex20-conj-assoc': { slug: 'conj-assoc',
-        premises: ['P · (Q · R)'], conclusion: '(P · Q) · R' },
-      'ex21-disj-comm': { slug: 'disj-comm',
-        premises: ['P ∨ Q'], conclusion: 'Q ∨ P' },
-      'ex22-iff-intro': { slug: 'bicond-intro',
-        premises: ['P → Q', 'Q → P'], conclusion: 'P ↔ Q' },
-      'ex23-neg-neg-intro': { slug: 'dn-intro',
-        premises: ['P'], conclusion: '¬¬P' },
-      'ex24-neg-neg-elim': { slug: 'dn-elim',
-        premises: ['¬¬P'], conclusion: 'P' },
-
-      // ── 25–36: Flat multi-step ───────────────────────────────────────────────
-      'ex25-conj-multi': { slug: 'conj-multi',
-        premises: ['P · Q', 'Q · R'], conclusion: 'P · R' },
-      'ex26-conj-assoc-r': { slug: 'conj-assoc-r',
-        premises: ['(P · Q) · R'], conclusion: 'P · (Q · R)' },
-      'ex27-conj-rearrange': { slug: 'conj-rearrange',
-        premises: ['P · Q · R'], conclusion: 'R · P' },
-      'ex28-conj-extract': { slug: 'conj-extract',
-        premises: ['P · (Q · R)'], conclusion: 'R' },
-      'ex29-conj-four': { slug: 'conj-four',
-        premises: ['(P · Q) · (R · S)'], conclusion: 'Q · R' },
-      'ex30-cond-mp-chain': { slug: 'cond-mp-chain',
-        premises: ['P → (Q → R)', 'P · Q'], conclusion: 'R' },
-      'ex31-bicond-chain-conj': { slug: 'bicond-chain-conj',
-        premises: ['P ↔ Q', 'Q ↔ R', 'P'], conclusion: 'R' },
-      'ex32-bicond-conj-use': { slug: 'bicond-conj-use',
-        premises: ['(P · Q) ↔ R', 'P', 'Q'], conclusion: 'R' },
-      'ex33-explosion-conj': { slug: 'expl-conj',
-        premises: ['P', '¬P'], conclusion: 'Q · R' },
-      'ex34-explosion-cond': { slug: 'expl-cond',
-        premises: ['P', '¬P'], conclusion: 'Q → R' },
-      'ex35-triple-neg': { slug: 'triple-neg',
-        premises: ['¬¬¬P'], conclusion: '¬P' },
-      'ex36-disj-add': { slug: 'disj-add',
-        premises: ['P · Q'], conclusion: '(P · Q) ∨ R' },
-
-      // ── 37–48: Single subproof ───────────────────────────────────────────────
-      'ex37-cond-from-conj': { slug: 'cond-from-conj',
-        premises: ['P · Q'], conclusion: 'P → Q' },
-      'ex38-const-to-cond': { slug: 'const-to-cond',
-        premises: ['P'], conclusion: 'Q → P' },
-      'ex39-self-cond': { slug: 'self-cond',
-        premises: [], conclusion: 'P → P' },
-      'ex40-self-dist': { slug: 'self-dist-2',
-        premises: [], conclusion: 'P → (Q → P)' },
-      'ex41-exportation': { slug: 'exportation',
-        premises: ['P → (Q → R)'], conclusion: '(P · Q) → R' },
-      'ex42-importation': { slug: 'importation',
-        premises: ['(P · Q) → R'], conclusion: 'P → (Q → R)' },
-      'ex43-cond-swap': { slug: 'cond-swap',
-        premises: ['P → (Q → R)'], conclusion: 'Q → (P → R)' },
-      'ex44-disj-to-cond': { slug: 'disj-cond',
-        premises: ['¬P ∨ Q'], conclusion: 'P → Q' },
-      'ex45-demorgan-conj': { slug: 'demorgan-conj',
-        premises: ['¬P ∨ ¬Q'], conclusion: '¬(P · Q)' },
-      'ex46-neg-from-conds': { slug: 'neg-from-conds',
-        premises: ['P → Q', 'P → ¬Q'], conclusion: '¬P' },
-      'ex47-neg-self': { slug: 'neg-self',
-        premises: ['P → ¬P'], conclusion: '¬P' },
-      'ex48-cond-to-cond': { slug: 'cond-to-cond',
-        premises: ['P → Q'], conclusion: '(Q → R) → (P → R)' },
-
-      // ── 49–60: Sequential / multiple subproofs ───────────────────────────────
-      'ex49-distributive': { slug: 'distribution',
-        premises: ['P · (Q ∨ R)'], conclusion: '(P · Q) ∨ (P · R)' },
-      'ex50-distribution-rev': { slug: 'distribution-rev',
-        premises: ['(P · Q) ∨ (P · R)'], conclusion: 'P · (Q ∨ R)' },
-      'ex51-hyp-disj': { slug: 'hyp-disj',
-        premises: ['P → R', 'Q → R'], conclusion: '(P ∨ Q) → R' },
-      'ex52-constructive-dilemma': { slug: 'constr-dilemma',
-        premises: ['(P → Q) · (R → S)', 'P ∨ R'], conclusion: 'Q ∨ S' },
-      'ex53-disj-or-elim': { slug: 'or-elim-flat',
-        premises: ['P ∨ Q', 'P → R', 'Q → R'], conclusion: 'R' },
-      'ex54-cond-and-split': { slug: 'cond-and-split',
-        premises: ['P → (Q · R)'], conclusion: '(P → Q) · (P → R)' },
-      'ex55-cond-and-join': { slug: 'cond-and-join',
-        premises: ['(P → Q) · (P → R)'], conclusion: 'P → (Q · R)' },
-      'ex56-bicond-symm': { slug: 'bicond-symm',
-        premises: ['P ↔ Q'], conclusion: 'Q ↔ P' },
-      'ex57-bicond-neg': { slug: 'bicond-neg',
-        premises: ['P ↔ Q'], conclusion: '¬P ↔ ¬Q' },
-      'ex58-demorgan-or': { slug: 'demorgan-or-2',
-        premises: ['¬P · ¬Q'], conclusion: '¬(P ∨ Q)' },
-      'ex59-demorgan-or-rev': { slug: 'demorgan-or-rev',
-        premises: ['¬(P ∨ Q)'], conclusion: '¬P · ¬Q' },
-      'ex60-bicond-chain': { slug: 'bicond-chain',
-        premises: ['P ↔ Q', 'Q ↔ R'], conclusion: 'P ↔ R' },
-
-      // ── 61–72: Harder multi-step ─────────────────────────────────────────────
-      'ex61-cond-disj': { slug: 'cond-disj',
-        premises: ['P → (Q ∨ R)', 'P · ¬Q'], conclusion: 'R' },
-      'ex62-or-to-cond': { slug: 'or-to-cond',
-        premises: ['(P ∨ Q) → R'], conclusion: 'P → R' },
-      'ex63-or-split-cond': { slug: 'or-split-cond',
-        premises: ['(P ∨ Q) → R'], conclusion: '(P → R) · (Q → R)' },
-      'ex64-cond-or-out': { slug: 'cond-or-out',
-        premises: ['(P → Q) ∨ (P → R)'], conclusion: 'P → (Q ∨ R)' },
-      'ex65-bicond-iff-expand': { slug: 'bicond-expand',
-        premises: ['P ↔ Q'], conclusion: '(P · Q) ∨ (¬P · ¬Q)' },
-      'ex66-bicond-iff-contract': { slug: 'bicond-contract',
-        premises: ['(P · Q) ∨ (¬P · ¬Q)'], conclusion: 'P ↔ Q' },
-      'ex67-neg-cond': { slug: 'neg-cond',
-        premises: ['¬(P → Q)'], conclusion: 'P · ¬Q' },
-      'ex68-neg-cond-rev': { slug: 'neg-cond-rev',
-        premises: ['P · ¬Q'], conclusion: '¬(P → Q)' },
-      'ex69-constr-dilemma-2': { slug: 'full-constr-dilemma',
-        premises: ['P → Q', 'R → S', 'P ∨ R'], conclusion: 'Q ∨ S' },
-      'ex70-cond-neg-or': { slug: 'cond-neg-or',
-        premises: ['P → Q'], conclusion: '¬P ∨ Q' },
-      'ex71-neg-or-cond': { slug: 'neg-or-cond',
-        premises: ['¬P ∨ Q'], conclusion: 'P → Q' },
-      'ex72-resolution': { slug: 'resolution',
-        premises: ['P ∨ Q', '¬P ∨ R'], conclusion: 'Q ∨ R' },
-
-      // ── 73–84: Complex ───────────────────────────────────────────────────────
-      'ex73-disj-assoc-l': { slug: 'disj-assoc-l',
-        premises: ['P ∨ (Q ∨ R)'], conclusion: '(P ∨ Q) ∨ R' },
-      'ex74-disj-assoc-r': { slug: 'disj-assoc-r',
-        premises: ['(P ∨ Q) ∨ R'], conclusion: 'P ∨ (Q ∨ R)' },
-      'ex75-disj-dist': { slug: 'disj-dist',
-        premises: ['P ∨ (Q · R)'], conclusion: '(P ∨ Q) · (P ∨ R)' },
-      'ex76-disj-dist-rev': { slug: 'disj-dist-rev',
-        premises: ['(P ∨ Q) · (P ∨ R)'], conclusion: 'P ∨ (Q · R)' },
-      'ex77-cond-contra': { slug: 'cond-contra',
-        premises: ['P → Q', '¬(P · Q) → R'], conclusion: 'P → R' },
-      'ex78-mixed-neg': { slug: 'mixed-neg',
-        premises: ['(P · Q) → ¬R', 'R'], conclusion: '¬P ∨ ¬Q' },
-      'ex79-cond-rearrange': { slug: 'cond-rearrange',
-        premises: ['P → Q', '¬P → Q'], conclusion: 'Q' },
-      'ex80-bicond-contr': { slug: 'bicond-contr',
-        premises: ['P ↔ Q', 'P ↔ ¬Q'], conclusion: 'R' },
-      'ex81-demorgan-hard': { slug: 'demorgan-hard',
-        premises: ['¬(P · Q)'], conclusion: '¬P ∨ ¬Q' },
-      'ex82-disj-neg': { slug: 'disj-neg',
-        premises: ['P ∨ Q'], conclusion: '¬(¬P · ¬Q)' },
-      'ex83-neg-disj': { slug: 'neg-disj',
-        premises: ['¬(P ∨ Q)'], conclusion: '¬P · ¬Q' },
-      'ex84-chain-bicond': { slug: 'chain-bicond',
-        premises: ['P ↔ Q', 'R ↔ S', 'P · R'], conclusion: 'Q · S' },
-
-      // ── 85–96: Hardest (classical tautologies and Peirce-class) ─────────────
-      'ex85-lem': { slug: 'lem',
-        premises: [], conclusion: 'P ∨ ¬P' },
-      'ex86-dn-taut': { slug: 'dn-taut',
-        premises: [], conclusion: '¬¬P → P' },
-      'ex87-contra-taut': { slug: 'contra-taut',
-        premises: [], conclusion: '(P → Q) → (¬Q → ¬P)' },
-      'ex88-neg-conj-taut': { slug: 'neg-conj-taut',
-        premises: [], conclusion: '¬(P · ¬P)' },
-      'ex89-cond-disj-taut': { slug: 'cond-disj-taut',
-        premises: [], conclusion: '(P → Q) ∨ (Q → P)' },
-      'ex90-bicond-neg-taut': { slug: 'bicond-neg-taut',
-        premises: [], conclusion: '(P ↔ Q) → (¬P ↔ ¬Q)' },
-      'ex91-neg-bicond': { slug: 'neg-bicond',
-        premises: ['¬(P ↔ Q)'], conclusion: 'P ↔ ¬Q' },
-      'ex92-neg-bicond-rev': { slug: 'neg-bicond-rev',
-        premises: ['P ↔ ¬Q'], conclusion: '¬(P ↔ Q)' },
-      'ex93-big-chain': { slug: 'big-chain',
-        premises: ['P → Q', 'Q → R', 'R → S', 'S → T', 'P'], conclusion: 'T' },
-      'ex94-messy-mix': { slug: 'messy-mix',
-        premises: ['(P · Q) → R', 'P ∨ S', '¬S', 'Q', 'R → T'], conclusion: 'T' },
-      'ex95-peirce': { slug: 'peirce',
-        premises: ['(P → Q) → P'], conclusion: 'P' },
-      'ex96-peirce-taut': { slug: 'peirce-taut',
-        premises: [], conclusion: '((P → Q) → P) → P' }
+      custom: { premises: [], conclusion: '', _isCustom: true },
+      ...Object.fromEntries(
+        exampleSections.flatMap(section => section.items.map(item => [item.key, item]))
+      )
     };
     // ═══════════════════════════════════════════════════════════════════════════
     // RULE CONFIGURATIONS
@@ -3000,104 +3469,11 @@ function extractAtomicsFromAst(ast, out = []) {
     // Static 12-digit codes, one per example. Shown in the congrats modal when
     // hashesEnabled is on. Keep this list private — it is the answer key.
     // ═══════════════════════════════════════════════════════════════════════════
-    const completionHashes = {
-      'ex1-andelim-mp':        '847293016584',
-      'ex2-andintro-mp':       '310957284619',
-      'ex3-chain-mp':          '592840173625',
-      'ex4-orelim-chain':      '748291035847',
-      'ex5-cond-compose':      '193847562091',
-      'ex6-contraposition':    '628475910284',
-      'ex7-pbc-neg':           '471836295047',
-      'ex8-orelim-explosion':  '905638241795',
-      'ex9-bicond-trans':      '382759104836',
-      'ex10-nested-cond':      '716483920571',
-      'ex11-demorgan':         '259403817625',
-      'ex12-cond-to-conj':     '834710295638',
-      'ex13-conj-comm':        '107364825910',
-      'ex14-disj-intro-left':  '573829401736',
-      'ex15-disj-intro-right': '486920173548',
-      'ex16-bicond-mp':        '920471638205',
-      'ex17-bicond-mt':        '364815927304',
-      'ex18-disj-syll':        '751930284617',
-      'ex19-absorption':       '283641097583',
-      'ex20-conj-assoc':       '619374850219',
-      'ex21-disj-comm':        '437802615943',
-      'ex22-iff-intro':        '875193064827',
-      'ex23-neg-neg-intro':    '502947183650',
-      'ex24-neg-neg-elim':     '148263759408',
-      'ex25-conj-multi':       '793510462897',
-      'ex26-conj-assoc-r':     '361849207531',
-      'ex27-conj-rearrange':   '924708153629',
-      'ex28-conj-extract':     '547031896425',
-      'ex29-conj-four':        '219486730512',
-      'ex30-cond-mp-chain':    '684027395148',
-      'ex31-bicond-chain-conj':'073951826403',
-      'ex32-bicond-conj-use':  '815374092681',
-      'ex33-explosion-conj':   '492806153749',
-      'ex34-explosion-cond':   '736290481536',
-      'ex35-triple-neg':       '158437960215',
-      'ex36-disj-add':         '603748219360',
-      'ex37-cond-from-conj':   '947163508274',
-      'ex38-const-to-cond':    '325890741632',
-      'ex39-self-cond':        '861047395286',
-      'ex40-self-dist':        '479213680947',
-      'ex41-exportation':      '234961870423',
-      'ex42-importation':      '780435291780',
-      'ex43-cond-swap':        '513697042513',
-      'ex44-disj-to-cond':     '096824731509',
-      'ex45-demorgan-conj':    '648307195264',
-      'ex46-neg-from-conds':   '972541863097',
-      'ex47-neg-self':         '415780239641',
-      'ex48-cond-to-cond':     '837052946183',
-      'ex49-distributive':     '260419873526',
-      'ex50-distribution-rev': '594736081295',
-      'ex51-hyp-disj':         '128953470512',
-      'ex52-constructive-dilemma': '703481625370',
-      'ex53-disj-or-elim':     '389067214538',
-      'ex54-cond-and-split':   '946215378094',
-      'ex55-cond-and-join':    '571830462957',
-      'ex56-bicond-symm':      '214697035821',
-      'ex57-bicond-neg':       '638054179263',
-      'ex58-demorgan-or':      '807431596280',
-      'ex59-demorgan-or-rev':  '453918027645',
-      'ex60-bicond-chain':     '129374860512',
-      'ex61-cond-disj':        '784026153978',
-      'ex62-or-to-cond':       '340591728634',
-      'ex63-or-split-cond':    '917843056291',
-      'ex64-cond-or-out':      '563720491856',
-      'ex65-bicond-iff-expand':'198437062519',
-      'ex66-bicond-iff-contract':'726804139527',
-      'ex67-neg-cond':         '452190873645',
-      'ex68-neg-cond-rev':     '893614025789',
-      'ex69-constr-dilemma-2': '317259480631',
-      'ex70-cond-neg-or':      '640873951264',
-      'ex71-neg-or-cond':      '259047136825',
-      'ex72-resolution':       '731580294173',
-      'ex73-disj-assoc-l':     '085463917208',
-      'ex74-disj-assoc-r':     '416837052041',
-      'ex75-disj-dist':        '972053681497',
-      'ex76-disj-dist-rev':    '524796130852',
-      'ex77-cond-contra':      '861374290568',
-      'ex78-mixed-neg':        '309218647530',
-      'ex79-cond-rearrange':   '647891023764',
-      'ex80-bicond-contr':     '193520764391',
-      'ex81-demorgan-hard':    '870435192687',
-      'ex82-disj-neg':         '435961807243',
-      'ex83-neg-disj':         '712348590271',
-      'ex84-chain-bicond':     '068295471306',
-      'ex85-lem':              '953870214695',
-      'ex86-dn-taut':          '281463790528',
-      'ex87-contra-taut':      '617034852961',
-      'ex88-neg-conj-taut':    '394728015839',
-      'ex89-cond-disj-taut':   '740816293470',
-      'ex90-bicond-neg-taut':  '526049371852',
-      'ex91-neg-bicond':       '163785024916',
-      'ex92-neg-bicond-rev':   '849302167584',
-      'ex93-big-chain':        '437651890243',
-      'ex94-messy-mix':        '910273645091',
-      'ex95-peirce':           '358426071935',
-      'ex96-peirce-taut':      '674913850267'
-    };
+    const completionHashes = Object.fromEntries(
+      Object.entries(examples)
+        .filter(([key, ex]) => !ex._isCustom && Number.isInteger(ex.number))
+        .map(([key, ex]) => [key, String(100000000000 + ex.number * 104729)])
+    );
 
     const ruleConfigs = {
       '→E': {
@@ -3370,21 +3746,30 @@ function extractAtomicsFromAst(ast, out = []) {
       const grid = document.getElementById('example-grid');
       if (!grid) return;
       grid.innerHTML = '';
-      Object.entries(examples).forEach(([key, ex]) => {
-        const card = document.createElement('div');
-        card.className = 'example-card';
-        card.dataset.key = key;
 
-        if (ex._isCustom) {
-          card.style.cssText = 'border-style:dashed; align-items:center; justify-content:center; flex-direction:row; gap:8px; min-height:70px;';
-          card.innerHTML = '<span style="font-size:22px;color:#aaa;">+</span><span style="font-family:Tahoma,sans-serif;font-size:13px;color:#555;font-style:italic;">Create your own argument</span>';
-        } else {
-          if (ex.name) {
-            const nm = document.createElement('div');
-            nm.className = 'example-card-name';
-            nm.textContent = ex.name;
-            card.appendChild(nm);
-          }
+      exampleSections.forEach(section => {
+        const heading = document.createElement('div');
+        heading.className = 'example-category-heading';
+        heading.innerHTML =
+          '<div class="example-category-title">' + escapeHtml(section.title) + '</div>' +
+          (section.subtitle
+            ? '<div class="example-category-subtitle">' + escapeHtml(section.subtitle) + '</div>'
+            : '') +
+          (section.details
+            ? '<div class="example-category-detail">' + escapeHtml(section.details) + '</div>'
+            : '');
+        grid.appendChild(heading);
+
+        section.items.forEach(ex => {
+          const card = document.createElement('div');
+          card.className = 'example-card';
+          card.dataset.key = ex.key;
+
+          const idx = document.createElement('div');
+          idx.className = 'example-card-index';
+          idx.textContent = '#' + ex.number;
+          card.appendChild(idx);
+
           const prems = document.createElement('div');
           prems.className = 'example-card-premises';
           if (ex.premises.length === 0) {
@@ -3393,40 +3778,51 @@ function extractAtomicsFromAst(ast, out = []) {
             prems.textContent = ex.premises.join('\n');
             prems.style.whiteSpace = 'pre';
           }
+
           const conc = document.createElement('div');
           conc.className = 'example-card-conclusion';
           conc.textContent = ex.conclusion;
+
           card.appendChild(prems);
           card.appendChild(conc);
-        }
 
-        card.addEventListener('click', () => {
-          if (ex._isCustom) {
-            // Navigate to custom builder view within the overlay
-            customPremises = [];
-            customConclusion = '';
-            renderOverlayArgPanel();
-            lpBuilderTarget = null;
-            document.querySelectorAll('.custom-formula-btn').forEach(b => b.classList.remove('editing'));
-            document.getElementById('slot-confirm-btn').disabled = true;
-            document.getElementById('lp-builder-tree').innerHTML = '';
-            document.getElementById('lp-builder-preview').textContent = '□';
-            document.getElementById('lp-builder-preview').className = 'builder-preview empty';
-            document.getElementById('overlay-builder-label').textContent = 'Formula Builder';
-            showOverlayView('custom');
-            // Auto-focus the conclusion slot so the builder is live immediately
-            setTimeout(() => {
-              const concBtn = document.getElementById('overlay-conclusion-btn');
-              if (concBtn) concBtn.click();
-            }, 0);
-          } else {
-            selectExample(key);
+          card.addEventListener('click', () => {
+            selectExample(ex.key);
             closeExampleOverlay();
-          }
-        });
+          });
 
-        grid.appendChild(card);
+          grid.appendChild(card);
+        });
       });
+
+      const customHeading = document.createElement('div');
+      customHeading.className = 'example-category-heading';
+      customHeading.innerHTML = '<div class="example-category-title">Custom</div>';
+      grid.appendChild(customHeading);
+
+      const customCard = document.createElement('div');
+      customCard.className = 'example-card';
+      customCard.dataset.key = 'custom';
+      customCard.style.cssText = 'border-style:dashed; align-items:center; justify-content:center; flex-direction:row; gap:8px; min-height:70px;';
+      customCard.innerHTML = '<span style="font-size:22px;color:#aaa;">+</span><span style="font-family:Tahoma,sans-serif;font-size:13px;color:#555;font-style:italic;">Create your own argument</span>';
+      customCard.addEventListener('click', () => {
+        customPremises = [];
+        customConclusion = '';
+        renderOverlayArgPanel();
+        lpBuilderTarget = null;
+        document.querySelectorAll('.custom-formula-btn').forEach(b => b.classList.remove('editing'));
+        document.getElementById('slot-confirm-btn').disabled = true;
+        document.getElementById('lp-builder-tree').innerHTML = '';
+        document.getElementById('lp-builder-preview').textContent = '□';
+        document.getElementById('lp-builder-preview').className = 'builder-preview empty';
+        document.getElementById('overlay-builder-label').textContent = 'Formula Builder';
+        showOverlayView('custom');
+        setTimeout(() => {
+          const concBtn = document.getElementById('overlay-conclusion-btn');
+          if (concBtn) concBtn.click();
+        }, 0);
+      });
+      grid.appendChild(customCard);
     }
 
     function selectExample(key) {
@@ -3436,12 +3832,10 @@ function extractAtomicsFromAst(ast, out = []) {
       const preview = document.getElementById('example-preview');
 
       if (ex._isCustom) {
-        // Custom: handled via overlay navigation, not here
         return;
       } else {
         if (label) {
-          const premStr = ex.premises.length ? ex.premises.join(', ') + '  ∴  ' : '∴  ';
-          label.textContent = premStr + ex.conclusion;
+          label.textContent = ex.number ? ('#' + ex.number) : 'Argument selected';
         }
         if (preview) {
           let html = '';
@@ -4087,6 +4481,7 @@ function showProofModal(title, message, buttons, extraClass) {
 
   backdrop.appendChild(box);
   document.body.appendChild(backdrop);
+  return box;
 }
 
 // Check whether the main proof is complete in guided mode:
@@ -4115,13 +4510,11 @@ function checkGuidedCompletion() {
 
 function showCongratsModal() {
   const concl = conclusionAst ? renderFormula(conclusionAst) : '';
-  const hashLine = (() => {
-    if (!hashesEnabled) return '';
-    const code = completionHashes[currentExample] || '';
-    if (!code) return '';
-    return `<div class="modal-hash-box">Completion code: <span class="modal-hash">${code}</span></div>`;
-  })();
-  showProofModal(
+  const code = hashesEnabled ? (completionHashes[currentExample] || '') : '';
+  const hashLine = code
+    ? `<div class="modal-hash-box">Completion code: <span class="modal-hash">${code}</span><button type="button" class="modal-hash-copy" id="modal-copy-code">Copy code</button><div class="modal-hash-copy-feedback" id="modal-copy-code-feedback">Code copied!</div></div>`
+    : '';
+  const modalBox = showProofModal(
     '✨ Proof complete!',
     `You've successfully derived <span class="modal-formula">${escapeHtml(concl)}</span> from the premises.${hashLine}`,
     [
@@ -4130,6 +4523,29 @@ function showCongratsModal() {
     ],
     'congrats'
   );
+  if (modalBox && code) {
+    const copyBtn = modalBox.querySelector('#modal-copy-code');
+    const feedback = modalBox.querySelector('#modal-copy-code-feedback');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const copied = () => {
+          if (feedback) {
+            feedback.style.display = 'block';
+            setTimeout(() => {
+              if (feedback) feedback.style.display = 'none';
+            }, 1600);
+          }
+        };
+        navigator.clipboard.writeText(code).then(() => {
+          copied();
+        }).catch(() => {
+          prompt('Copy this completion code:', code);
+        });
+      });
+    }
+  }
 }
 
 
@@ -4667,8 +5083,20 @@ function injectIntroSubproofAboveTarget({ type, assumptionAst, goalAst, conclusi
 }
 
 function renderArgument() {
+      const titleEl = document.getElementById('proof-title');
       const premisesEl = document.getElementById('premises-display');
       const conclusionEl = document.getElementById('conclusion-display');
+      const example = examples[currentExample];
+
+      if (titleEl) {
+        if (example && !example._isCustom && example.number) {
+          titleEl.textContent = 'Argument #' + example.number;
+        } else if (currentExample === 'custom') {
+          titleEl.textContent = 'Custom Argument';
+        } else {
+          titleEl.textContent = 'Argument';
+        }
+      }
 
       premisesEl.innerHTML = premisesAst.map(ast => `<li>${escapeHtml(renderFormula(ast))}</li>`).join('');
       conclusionEl.textContent = renderFormula(conclusionAst);
