@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<!-- ProofApp18_7: replaced prompt-based instructor PIN entry with an in-overlay panel so instructor view works inside sandboxed embeds; removed prompt fallback from completion-code copying
+<!-- ProofApp18_10: replaced formula-based completion codes with a fixed per-problem code table so codes stay with problems across future renumbering/reordering
+     ProofApp18_8: hardened sandbox/incognito behavior by replacing browser-alert dependence with in-app notices and adding a manual-copy fallback modal when clipboard APIs are blocked
+     ProofApp18_7: replaced prompt-based instructor PIN entry with an in-overlay panel so instructor view works inside sandboxed embeds; removed prompt fallback from completion-code copying
      ProofApp18_6: added PIN-gated instructor view in the example chooser with one-click copy buttons for each example link and success code
      ProofApp18_5: share links now build from a clean hosted page base (canonical/baseURI/http origin+pathname), with clipboard fallback that does not prompt giant attachment/data URLs
      ProofApp18_4: removed leftover share-URL helper text
@@ -9,7 +11,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProofApp18_7</title>
+  <title>ProofApp18_10</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,600;1,400;1,600;1,700&display=swap" rel="stylesheet">
   <style>
@@ -511,6 +513,8 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      width: min(1680px, calc(100% - 48px));
+      margin: 0 auto;
     }
     
     .proof-header {
@@ -1847,6 +1851,34 @@
       color: #5b21b6;
       display: none;
     }
+    .copy-assist-note {
+      margin: 0 0 12px;
+      color: #444;
+      line-height: 1.45;
+    }
+    .copy-assist-note strong {
+      color: #111;
+    }
+    .copy-assist-textarea {
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+      padding: 10px;
+      font-size: 12px;
+      line-height: 1.4;
+      font-family: 'Courier New', monospace;
+      border: 1px solid #999;
+      background: #fafafa;
+      color: #111;
+      margin-bottom: 12px;
+    }
+    .proof-modal.copy-assist {
+      max-width: 560px;
+      width: min(92vw, 560px);
+    }
+    .proof-modal.notice {
+      max-width: 420px;
+    }
     .proof-modal-actions {
       display: flex; gap: 8px; justify-content: flex-end;
     }
@@ -2132,7 +2164,7 @@
 </style>
 </head>
 <body>
-  <div class="version-badge" id="version-badge">v18.7</div>
+  <div class="version-badge" id="version-badge">v18.10</div>
   <!-- Settings gear (fixed, always visible) -->
   <button class="settings-btn" id="settings-btn-landing" title="Settings">⚙️</button>
   <div class="settings-panel" id="settings-panel">
@@ -3003,61 +3035,54 @@ function extractAtomicsFromAst(ast, out = []) {
             conclusion: "Q · P"
           },
           {
-            key: "ex006",
+            key: "ex007",
             slug: "6",
             number: 6,
-            premises: ["P · (Q ∨ R)"],
-            conclusion: "(P · Q) ∨ (P · R)"
-          },
-          {
-            key: "ex007",
-            slug: "7",
-            number: 7,
             premises: ["(P · Q) · R"],
             conclusion: "R · P"
           },
           {
             key: "ex008",
-            slug: "8",
-            number: 8,
+            slug: "7",
+            number: 7,
             premises: ["¬¬¬P"],
             conclusion: "¬P"
           },
           {
             key: "ex009",
-            slug: "9",
-            number: 9,
+            slug: "8",
+            number: 8,
             premises: ["(P · Q) · (R · S)"],
             conclusion: "Q · R"
           },
           {
             key: "ex010",
-            slug: "10",
-            number: 10,
+            slug: "9",
+            number: 9,
             premises: ["P · (Q · R)"],
             conclusion: "(P · Q) · R"
           },
           {
             key: "ex011",
-            slug: "11",
-            number: 11,
+            slug: "10",
+            number: 10,
             premises: ["(P · Q) · R"],
             conclusion: "P · (Q · R)"
           },
           {
             key: "ex012",
-            slug: "12",
-            number: 12,
+            slug: "11",
+            number: 11,
             premises: ["P · Q"],
             conclusion: "P ∨ R"
           },
           {
             key: "ex013",
-            slug: "13",
-            number: 13,
+            slug: "12",
+            number: 12,
             premises: ["¬¬(¬¬P · Q)", "S"],
             conclusion: "S · P"
-          },
+          }
         ]
       },
       {
@@ -3067,172 +3092,172 @@ function extractAtomicsFromAst(ast, out = []) {
         items: [
           {
             key: "ex014",
-            slug: "14",
-            number: 14,
+            slug: "13",
+            number: 13,
             premises: ["P · Q", "P → R"],
             conclusion: "R"
           },
           {
             key: "ex015",
-            slug: "15",
-            number: 15,
+            slug: "14",
+            number: 14,
             premises: ["P", "Q", "(P · Q) → R"],
             conclusion: "R"
           },
           {
             key: "ex016",
-            slug: "16",
-            number: 16,
+            slug: "15",
+            number: 15,
             premises: ["(P ∨ Q) → R"],
             conclusion: "P → R"
           },
           {
             key: "ex017",
-            slug: "17",
-            number: 17,
+            slug: "16",
+            number: 16,
             premises: ["(P ∨ Q) → R"],
             conclusion: "(P → R) · (Q → R)"
           },
           {
             key: "ex018",
-            slug: "18",
-            number: 18,
+            slug: "17",
+            number: 17,
             premises: ["P → (Q → R)", "P · Q"],
             conclusion: "R"
           },
           {
             key: "ex019",
-            slug: "19",
-            number: 19,
+            slug: "18",
+            number: 18,
             premises: ["P → Q", "Q → R", "P"],
             conclusion: "R"
           },
           {
             key: "ex020",
-            slug: "20",
-            number: 20,
+            slug: "19",
+            number: 19,
             premises: ["P → Q", "Q → R", "R → S", "S → U", "P"],
             conclusion: "U"
           },
           {
             key: "ex021",
-            slug: "21",
-            number: 21,
+            slug: "20",
+            number: 20,
             premises: ["Q ↔ P", "Q ↔ R", "R"],
             conclusion: "P"
           },
           {
             key: "ex022",
-            slug: "22",
-            number: 22,
+            slug: "21",
+            number: 21,
             premises: ["(P · Q) ↔ (R ∨ S)", "R"],
             conclusion: "P"
           },
           {
             key: "ex023",
-            slug: "23",
-            number: 23,
+            slug: "22",
+            number: 22,
             premises: ["P ↔ Q", "R ↔ S", "P · R"],
             conclusion: "Q · S"
           },
           {
             key: "ex024",
-            slug: "24",
-            number: 24,
+            slug: "23",
+            number: 23,
             premises: ["(P → Q) · (P → R)"],
             conclusion: "P → (Q · R)"
           },
           {
             key: "ex025",
-            slug: "25",
-            number: 25,
+            slug: "24",
+            number: 24,
             premises: ["P ↔ Q", "Q ↔ R"],
             conclusion: "P ↔ R"
           },
           {
             key: "ex026",
-            slug: "26",
-            number: 26,
+            slug: "25",
+            number: 25,
             premises: [],
             conclusion: "P → P"
           },
           {
             key: "ex027",
-            slug: "27",
-            number: 27,
+            slug: "26",
+            number: 26,
             premises: [],
             conclusion: "¬¬P → P"
           },
           {
             key: "ex028",
-            slug: "28",
-            number: 28,
+            slug: "27",
+            number: 27,
             premises: ["P → Q"],
             conclusion: "P → (P · Q)"
           },
           {
             key: "ex029",
-            slug: "29",
-            number: 29,
+            slug: "28",
+            number: 28,
             premises: ["P → Q", "Q → R"],
             conclusion: "P → R"
           },
           {
             key: "ex030",
-            slug: "30",
-            number: 30,
+            slug: "29",
+            number: 29,
             premises: ["P ↔ Q", "Q ↔ R"],
             conclusion: "P ↔ R"
           },
           {
             key: "ex031",
-            slug: "31",
-            number: 31,
+            slug: "30",
+            number: 30,
             premises: ["P ↔ Q"],
             conclusion: "Q ↔ P"
           },
           {
             key: "ex032",
-            slug: "32",
-            number: 32,
+            slug: "31",
+            number: 31,
             premises: ["P · Q"],
             conclusion: "P → Q"
           },
           {
             key: "ex033",
-            slug: "33",
-            number: 33,
+            slug: "32",
+            number: 32,
             premises: ["P → (Q · R)"],
             conclusion: "(P → Q) · (P → R)"
           },
           {
             key: "ex034",
-            slug: "34",
-            number: 34,
+            slug: "33",
+            number: 33,
             premises: ["P → (Q → R)"],
             conclusion: "(P · Q) → R"
           },
           {
             key: "ex035",
-            slug: "35",
-            number: 35,
+            slug: "34",
+            number: 34,
             premises: ["P → (Q → R)"],
             conclusion: "Q → (P → R)"
           },
           {
             key: "ex036",
-            slug: "36",
-            number: 36,
+            slug: "35",
+            number: 35,
             premises: ["P → Q"],
             conclusion: "(Q → R) → (P → R)"
           },
           {
             key: "ex037",
-            slug: "37",
-            number: 37,
+            slug: "36",
+            number: 36,
             premises: [],
             conclusion: "P → (Q → P)"
-          },
+          }
         ]
       },
       {
@@ -3242,17 +3267,24 @@ function extractAtomicsFromAst(ast, out = []) {
         items: [
           {
             key: "ex038",
-            slug: "38",
-            number: 38,
+            slug: "37",
+            number: 37,
             premises: ["P"],
             conclusion: "¬¬P"
           },
           {
             key: "ex039",
-            slug: "39",
-            number: 39,
+            slug: "38",
+            number: 38,
             premises: ["(P · Q) ∨ (P · R)"],
             conclusion: "P · (Q ∨ R)"
+          },
+          {
+            key: "ex006",
+            slug: "39",
+            number: 39,
+            premises: ["P · (Q ∨ R)"],
+            conclusion: "(P · Q) ∨ (P · R)"
           },
           {
             key: "ex040",
@@ -3442,7 +3474,14 @@ function extractAtomicsFromAst(ast, out = []) {
             number: 66,
             premises: ["P ↔ Q"],
             conclusion: "¬P ↔ ¬Q"
-          },
+          }
+        ]
+      },
+      {
+        title: "Phase Four",
+        subtitle: "Requires: Basic Rules + Conditional Rules + Final Rules",
+        details: "Extra tough: mixed applications of everything above",
+        items: [
           {
             key: "ex067",
             slug: "67",
@@ -3471,13 +3510,6 @@ function extractAtomicsFromAst(ast, out = []) {
             premises: [],
             conclusion: "(P ↔ Q) → (¬P ↔ ¬Q)"
           },
-        ]
-      },
-      {
-        title: "Phase Four",
-        subtitle: "Requires: Basic Rules + Conditional Rules + Final Rules",
-        details: "Extra tough: mixed applications of everything above",
-        items: [
           {
             key: "ex071",
             slug: "71",
@@ -3582,9 +3614,9 @@ function extractAtomicsFromAst(ast, out = []) {
             number: 85,
             premises: [],
             conclusion: "(P → Q) ∨ (Q → P)"
-          },
+          }
         ]
-      },
+      }
     ];
 
     const examples = {
@@ -3598,13 +3630,40 @@ function extractAtomicsFromAst(ast, out = []) {
     // ═══════════════════════════════════════════════════════════════════════════
     // ═══════════════════════════════════════════════════════════════════════════
     // COMPLETION HASHES
-    // Static 12-digit codes, one per example. Shown in the congrats modal when
-    // hashesEnabled is on. Keep this list private — it is the answer key.
+    // Fixed 8-digit codes, one per premade example, assigned by stable example
+    // order rather than visible problem number so they stay with the problems
+    // even if examples are renumbered later.
     // ═══════════════════════════════════════════════════════════════════════════
+    const fixedCompletionCodes = [
+      '32390698', '53098322', '07861023', '66387934', '89358059',
+      '32991224', '91052627', '09406898', '72422229', '78805481',
+      '45566748', '89750258', '81482397', '46606955', '42627414',
+      '98926774', '73138993', '07392989', '37818864', '95580776',
+      '27768534', '20917550', '91012222', '35575657', '61524733',
+      '16881435', '85426177', '08540989', '32840869', '69731374',
+      '54289684', '63283170', '08965655', '90151164', '60734840',
+      '17725375', '15632979', '66549672', '14500185', '74547180',
+      '44091745', '33570882', '21026161', '23875154', '28601015',
+      '34069458', '68992560', '32127338', '23229791', '61229702',
+      '12615634', '97768884', '81577705', '53950570', '06811463',
+      '78975278', '95511158', '90377733', '18358542', '20815660',
+      '91681324', '37970070', '75134198', '54786123', '89385210',
+      '10416350', '61026780', '98960231', '87214518', '70401380',
+      '48358872', '47307388', '05249737', '67529454', '44382124',
+      '50307543', '48726529', '65629552', '52887630', '77255650',
+      '76566427', '58921096', '89758115', '43379404', '91901854',
+      '87070433', '74582172', '91067889', '21976598', '57994386',
+      '44028643', '17120287', '62001362', '97012287', '25142328',
+      '27192326', '29191430', '85289329', '10476416', '18283641'
+    ];
+    const orderedPremadeExampleKeys = exampleSections.flatMap(section =>
+      section.items.map(item => item.key)
+    );
+    if (fixedCompletionCodes.length < orderedPremadeExampleKeys.length) {
+      console.warn('[CODES] Not enough fixed completion codes for all premade examples.');
+    }
     const completionHashes = Object.fromEntries(
-      Object.entries(examples)
-        .filter(([key, ex]) => !ex._isCustom && Number.isInteger(ex.number))
-        .map(([key, ex]) => [key, String(100000000000 + ex.number * 104729)])
+      orderedPremadeExampleKeys.map((key, idx) => [key, fixedCompletionCodes[idx] || ''])
     );
 
     const ruleConfigs = {
@@ -3987,6 +4046,12 @@ function extractAtomicsFromAst(ast, out = []) {
       grid.appendChild(customCard);
     }
 
+    function refreshSelectedExampleCard() {
+      document.querySelectorAll('.example-card').forEach(c => {
+        c.classList.toggle('selected', c.dataset.key === currentExample);
+      });
+    }
+
     function selectExample(key) {
       currentExample = key;
       const ex = examples[key];
@@ -4009,9 +4074,7 @@ function extractAtomicsFromAst(ast, out = []) {
         document.getElementById('start-btn').disabled = false;
       }
 
-      document.querySelectorAll('.example-card').forEach(c => {
-        c.classList.toggle('selected', c.dataset.key === key);
-      });
+      refreshSelectedExampleCard();
     }
 
     function updateInstructorViewButton() {
@@ -4058,11 +4121,7 @@ function extractAtomicsFromAst(ast, out = []) {
       closeInstructorPinPanel();
       updateInstructorViewButton();
       buildExampleCards();
-      if (currentExample) {
-        document.querySelectorAll('.example-card').forEach(c => {
-          c.classList.toggle('selected', c.dataset.key === currentExample);
-        });
-      }
+      if (currentExample) refreshSelectedExampleCard();
     }
 
     function buildExampleDirectUrl(ex) {
@@ -4075,13 +4134,13 @@ function extractAtomicsFromAst(ast, out = []) {
     }
 
     async function handleInstructorCopy(button, value, successLabel = 'Copied!') {
-      const ok = await copyTextValue(value);
+      const status = await copyTextValue(value, { title: successLabel === 'Link copied!' ? 'Copy link manually' : 'Copy success code manually' });
       const original = button.dataset.originalLabel || button.textContent;
       button.dataset.originalLabel = original;
-      button.textContent = ok ? successLabel : 'Copy failed';
+      button.textContent = status === 'copied' ? successLabel : (status === 'manual' ? 'Ready to copy manually' : 'Copy failed');
       setTimeout(() => {
         button.textContent = original;
-      }, 1100);
+      }, status === 'manual' ? 1600 : 1100);
     }
 
     function toggleInstructorView() {
@@ -4098,23 +4157,14 @@ function extractAtomicsFromAst(ast, out = []) {
       closeInstructorPinPanel();
       updateInstructorViewButton();
       buildExampleCards();
-      if (currentExample) {
-        document.querySelectorAll('.example-card').forEach(c => {
-          c.classList.toggle('selected', c.dataset.key === currentExample);
-        });
-      }
+      if (currentExample) refreshSelectedExampleCard();
     }
 
     function openExampleOverlay() {
       updateInstructorViewButton();
       closeInstructorPinPanel();
       buildExampleCards();
-      // Mark already-selected card
-      if (currentExample) {
-        document.querySelectorAll('.example-card').forEach(c => {
-          c.classList.toggle('selected', c.dataset.key === currentExample);
-        });
-      }
+      if (currentExample) refreshSelectedExampleCard();
       document.getElementById('example-overlay').classList.add('open');
     }
 
@@ -4330,11 +4380,11 @@ function extractAtomicsFromAst(ast, out = []) {
       return url.toString();
     }
 
-    async function copyTextValue(text) {
-      if (!text) return false;
+    async function copyTextValue(text, options = {}) {
+      if (!text) return 'failed';
       try {
         await navigator.clipboard.writeText(text);
-        return true;
+        return 'copied';
       } catch (e) {}
 
       try {
@@ -4350,9 +4400,14 @@ function extractAtomicsFromAst(ast, out = []) {
         ta.setSelectionRange(0, ta.value.length);
         const ok = document.execCommand('copy');
         ta.remove();
-        return !!ok;
+        if (ok) return 'copied';
+      } catch (e) {}
+
+      try {
+        showCopyAssistModal(text, options.title || 'Copy manually');
+        return 'manual';
       } catch (e) {
-        return false;
+        return 'failed';
       }
     }
 
@@ -4384,12 +4439,14 @@ function extractAtomicsFromAst(ast, out = []) {
           }
           return;
         }
-        const copied = await copyTextValue(url);
+        const copyStatus = await copyTextValue(url, { title: 'Copy link manually' });
         if (feedback) {
-          feedback.textContent = copied ? 'Link copied!' : 'Could not copy link.';
-          feedback.style.color = copied ? '#2e7d32' : '#c62828';
+          feedback.textContent = copyStatus === 'copied'
+            ? 'Link copied!'
+            : (copyStatus === 'manual' ? 'Manual copy panel opened.' : 'Could not copy link.');
+          feedback.style.color = copyStatus === 'copied' ? '#2e7d32' : (copyStatus === 'manual' ? '#8a5a00' : '#c62828');
           feedback.style.display = 'block';
-          setTimeout(() => { feedback.style.display = 'none'; }, copied ? 2000 : 2600);
+          setTimeout(() => { feedback.style.display = 'none'; }, copyStatus === 'copied' ? 2000 : 3200);
         }
         document.getElementById('settings-panel').classList.remove('open');
       });
@@ -4859,16 +4916,18 @@ function showCongratsModal() {
       copyBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const ok = await copyTextValue(code);
+        const status = await copyTextValue(code, { title: 'Copy completion code manually' });
         if (feedback) {
-          feedback.textContent = ok ? 'Code copied!' : 'Copy failed';
+          feedback.textContent = status === 'copied'
+            ? 'Code copied!'
+            : (status === 'manual' ? 'Manual copy panel opened.' : 'Copy failed');
           feedback.style.display = 'block';
           setTimeout(() => {
             if (feedback) {
               feedback.style.display = 'none';
               feedback.textContent = 'Code copied!';
             }
-          }, 1600);
+          }, status === 'copied' ? 1600 : 3200);
         }
       });
     }
