@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- ProofApp18_10: replaced formula-based completion codes with a fixed per-problem code table so codes stay with problems across future renumbering/reordering
+<!-- ProofApp18_11: reverted fixed completion-code table to a deterministic nonlinear formula based on visible example number; updated codes to remain 8-digit and LMS-describable
+     ProofApp18_10: replaced formula-based completion codes with a fixed per-problem code table so codes stay with problems across future renumbering/reordering
      ProofApp18_8: hardened sandbox/incognito behavior by replacing browser-alert dependence with in-app notices and adding a manual-copy fallback modal when clipboard APIs are blocked
      ProofApp18_7: replaced prompt-based instructor PIN entry with an in-overlay panel so instructor view works inside sandboxed embeds; removed prompt fallback from completion-code copying
      ProofApp18_6: added PIN-gated instructor view in the example chooser with one-click copy buttons for each example link and success code
@@ -11,7 +12,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProofApp18_10</title>
+  <title>ProofApp18_11</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,600;1,400;1,600;1,700&display=swap" rel="stylesheet">
   <style>
@@ -2164,7 +2165,7 @@
 </style>
 </head>
 <body>
-  <div class="version-badge" id="version-badge">v18.10</div>
+  <div class="version-badge" id="version-badge">v18.11</div>
   <!-- Settings gear (fixed, always visible) -->
   <button class="settings-btn" id="settings-btn-landing" title="Settings">⚙️</button>
   <div class="settings-panel" id="settings-panel">
@@ -3630,40 +3631,27 @@ function extractAtomicsFromAst(ast, out = []) {
     // ═══════════════════════════════════════════════════════════════════════════
     // ═══════════════════════════════════════════════════════════════════════════
     // COMPLETION HASHES
-    // Fixed 8-digit codes, one per premade example, assigned by stable example
-    // order rather than visible problem number so they stay with the problems
-    // even if examples are renumbered later.
+    // Deterministic nonlinear 8-digit codes derived from the visible example
+    // number. This keeps code assignment automatic for new examples while
+    // making the mapping much harder to infer from a small sample.
     // ═══════════════════════════════════════════════════════════════════════════
-    const fixedCompletionCodes = [
-      '32390698', '53098322', '07861023', '66387934', '89358059',
-      '32991224', '91052627', '09406898', '72422229', '78805481',
-      '45566748', '89750258', '81482397', '46606955', '42627414',
-      '98926774', '73138993', '07392989', '37818864', '95580776',
-      '27768534', '20917550', '91012222', '35575657', '61524733',
-      '16881435', '85426177', '08540989', '32840869', '69731374',
-      '54289684', '63283170', '08965655', '90151164', '60734840',
-      '17725375', '15632979', '66549672', '14500185', '74547180',
-      '44091745', '33570882', '21026161', '23875154', '28601015',
-      '34069458', '68992560', '32127338', '23229791', '61229702',
-      '12615634', '97768884', '81577705', '53950570', '06811463',
-      '78975278', '95511158', '90377733', '18358542', '20815660',
-      '91681324', '37970070', '75134198', '54786123', '89385210',
-      '10416350', '61026780', '98960231', '87214518', '70401380',
-      '48358872', '47307388', '05249737', '67529454', '44382124',
-      '50307543', '48726529', '65629552', '52887630', '77255650',
-      '76566427', '58921096', '89758115', '43379404', '91901854',
-      '87070433', '74582172', '91067889', '21976598', '57994386',
-      '44028643', '17120287', '62001362', '97012287', '25142328',
-      '27192326', '29191430', '85289329', '10476416', '18283641'
-    ];
-    const orderedPremadeExampleKeys = exampleSections.flatMap(section =>
-      section.items.map(item => item.key)
-    );
-    if (fixedCompletionCodes.length < orderedPremadeExampleKeys.length) {
-      console.warn('[CODES] Not enough fixed completion codes for all premade examples.');
+    function generateCompletionCode(exampleNumber) {
+      const x = Number(exampleNumber) || 0;
+      const unitValue = Math.abs(
+        Math.sin((x ** 3 + 17 * x ** 2 + 29 * x + 43) / 7) +
+        Math.cos((19 * x ** 2 + 23 * x + 11) / 13) +
+        Math.sin(Math.sqrt(x + 3) * 23) +
+        Math.cos(Math.log(x + 11) * 29) +
+        Math.sin(Math.log10(x + 101) * 31)
+      ) / (5 + Math.abs(Math.tan((x + 5) / 17)));
+      const normalized = Math.floor(10000000 + 89999999 * unitValue);
+      return String(normalized).padStart(8, '0');
     }
+
     const completionHashes = Object.fromEntries(
-      orderedPremadeExampleKeys.map((key, idx) => [key, fixedCompletionCodes[idx] || ''])
+      exampleSections.flatMap(section =>
+        section.items.map(item => [item.key, generateCompletionCode(item.number)])
+      )
     );
 
     const ruleConfigs = {
