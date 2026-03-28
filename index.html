@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- ProofApp18_5: share links now build from a clean hosted page base (canonical/baseURI/http origin+pathname), with clipboard fallback that does not prompt giant attachment/data URLs
+<!-- ProofApp18_6: added PIN-gated instructor view in the example chooser with one-click copy buttons for each example link and success code
+     ProofApp18_5: share links now build from a clean hosted page base (canonical/baseURI/http origin+pathname), with clipboard fallback that does not prompt giant attachment/data URLs
      ProofApp18_4: removed leftover share-URL helper text
      ProofApp18_4: phase headings, cumulative requirements, copyable completion codes
      ProofApp18_0: regrouped examples, numbered arguments, wider chooser -->
@@ -7,7 +8,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProofApp18_5</title>
+  <title>ProofApp18_6</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,600;1,400;1,600;1,700&display=swap" rel="stylesheet">
   <style>
@@ -300,6 +301,26 @@
 
     .example-popup-close:hover { background: #d0d0d0; }
 
+    .example-popup-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .example-instructor-btn {
+      background: #fff;
+      border: 1px solid #888;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: bold;
+      font-family: Tahoma, Verdana, Arial, sans-serif;
+      line-height: 1.3;
+    }
+
+    .example-instructor-btn:hover { background: #f1f1f1; }
+    .example-instructor-btn.active { background: #e8eeff; border-color: #000; }
+
     .example-grid {
       padding: 18px;
       overflow-y: auto;
@@ -343,6 +364,28 @@
       padding-top: 6px;
     }
     .example-card-conclusion::before { content: '∴ '; }
+
+    .example-card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .example-card-copy-btn {
+      border: 1px solid #888;
+      background: #fff;
+      padding: 5px 8px;
+      font-size: 11px;
+      font-family: Tahoma, Verdana, Arial, sans-serif;
+      cursor: pointer;
+      color: #222;
+    }
+
+    .example-card-copy-btn:hover {
+      border-color: #000;
+      background: #f3f3f3;
+    }
 
     /* ── Two-view popup layout ── */
     #overlay-view-custom {
@@ -2038,7 +2081,7 @@
 </style>
 </head>
 <body>
-  <div class="version-badge" id="version-badge">v18.5</div>
+  <div class="version-badge" id="version-badge">v18.6</div>
   <!-- Settings gear (fixed, always visible) -->
   <button class="settings-btn" id="settings-btn-landing" title="Settings">⚙️</button>
   <div class="settings-panel" id="settings-panel">
@@ -2087,7 +2130,10 @@
       <div id="overlay-view-grid">
         <div class="example-popup-header">
           <span>Select an Argument</span>
-          <button class="example-popup-close" id="close-overlay">×</button>
+          <div class="example-popup-header-actions">
+            <button class="example-instructor-btn" id="instructor-view-btn" type="button">Instructor View</button>
+            <button class="example-popup-close" id="close-overlay">×</button>
+          </div>
         </div>
         <div class="example-grid" id="example-grid">
           <!-- Cards injected by JS -->
@@ -3618,6 +3664,8 @@ function extractAtomicsFromAst(ast, out = []) {
     let lpBuilderTarget = null; // 'conclusion' | number (premise index)
     let customPremises = [];    // array of strings
     let customConclusion = '';
+    let instructorViewEnabled = false;
+    const instructorPin = '72725';
 
     function astToBuilderNode(ast, state) {
       if (!ast) return { type: 'blank', id: 'lp' + state.idCounter++ };
@@ -3814,6 +3862,34 @@ function extractAtomicsFromAst(ast, out = []) {
           card.appendChild(prems);
           card.appendChild(conc);
 
+          if (instructorViewEnabled) {
+            const actions = document.createElement('div');
+            actions.className = 'example-card-actions';
+
+            const copyLinkBtn = document.createElement('button');
+            copyLinkBtn.type = 'button';
+            copyLinkBtn.className = 'example-card-copy-btn';
+            copyLinkBtn.textContent = 'Copy link';
+            copyLinkBtn.addEventListener('click', async (ev) => {
+              ev.stopPropagation();
+              const url = buildExampleDirectUrl(ex);
+              await handleInstructorCopy(copyLinkBtn, url, 'Link copied!');
+            });
+
+            const copyCodeBtn = document.createElement('button');
+            copyCodeBtn.type = 'button';
+            copyCodeBtn.className = 'example-card-copy-btn';
+            copyCodeBtn.textContent = 'Copy success code';
+            copyCodeBtn.addEventListener('click', async (ev) => {
+              ev.stopPropagation();
+              await handleInstructorCopy(copyCodeBtn, completionHashes[ex.key] || '', 'Code copied!');
+            });
+
+            actions.appendChild(copyLinkBtn);
+            actions.appendChild(copyCodeBtn);
+            card.appendChild(actions);
+          }
+
           card.addEventListener('click', () => {
             selectExample(ex.key);
             closeExampleOverlay();
@@ -3880,7 +3956,55 @@ function extractAtomicsFromAst(ast, out = []) {
       });
     }
 
+    function updateInstructorViewButton() {
+      const btn = document.getElementById('instructor-view-btn');
+      if (!btn) return;
+      btn.classList.toggle('active', instructorViewEnabled);
+      btn.textContent = instructorViewEnabled ? 'Instructor View On' : 'Instructor View';
+    }
+
+    function buildExampleDirectUrl(ex) {
+      if (!ex || !ex.slug) return null;
+      const base = getHostedPageBaseUrl();
+      if (!base) return null;
+      const url = new URL(base);
+      url.searchParams.set('example', ex.slug);
+      return url.toString();
+    }
+
+    async function handleInstructorCopy(button, value, successLabel = 'Copied!') {
+      const ok = await copyTextValue(value);
+      const original = button.dataset.originalLabel || button.textContent;
+      button.dataset.originalLabel = original;
+      button.textContent = ok ? successLabel : 'Copy failed';
+      setTimeout(() => {
+        button.textContent = original;
+      }, 1100);
+    }
+
+    function toggleInstructorView() {
+      if (!instructorViewEnabled) {
+        const entered = prompt('Enter instructor PIN:');
+        if (entered === null) return;
+        if (entered !== instructorPin) {
+          alert('Incorrect PIN.');
+          return;
+        }
+        instructorViewEnabled = true;
+      } else {
+        instructorViewEnabled = false;
+      }
+      updateInstructorViewButton();
+      buildExampleCards();
+      if (currentExample) {
+        document.querySelectorAll('.example-card').forEach(c => {
+          c.classList.toggle('selected', c.dataset.key === currentExample);
+        });
+      }
+    }
+
     function openExampleOverlay() {
+      updateInstructorViewButton();
       buildExampleCards();
       // Mark already-selected card
       if (currentExample) {
@@ -3896,6 +4020,7 @@ function extractAtomicsFromAst(ast, out = []) {
     }
 
     document.getElementById('open-overlay-btn').addEventListener('click', openExampleOverlay);
+    document.getElementById('instructor-view-btn').addEventListener('click', toggleInstructorView);
     document.getElementById('close-overlay').addEventListener('click', closeExampleOverlay);
     document.getElementById('example-overlay').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) closeExampleOverlay();
