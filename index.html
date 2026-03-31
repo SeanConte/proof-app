@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- ProofApp18_11: reverted fixed completion-code table to a deterministic nonlinear formula based on visible example number; updated codes to remain 8-digit and LMS-describable
+<!-- ProofApp18_12: fixed ∨ introduction builder atomics so the other-disjunct picker draws from current proof lines plus goal/conclusion formulas, allowing atoms that appear only in the conclusion
+     ProofApp18_11: reverted fixed completion-code table to a deterministic nonlinear formula based on visible example number; updated codes to remain 8-digit and LMS-describable
      ProofApp18_10: replaced formula-based completion codes with a fixed per-problem code table so codes stay with problems across future renumbering/reordering
      ProofApp18_8: hardened sandbox/incognito behavior by replacing browser-alert dependence with in-app notices and adding a manual-copy fallback modal when clipboard APIs are blocked
      ProofApp18_7: replaced prompt-based instructor PIN entry with an in-overlay panel so instructor view works inside sandboxed embeds; removed prompt fallback from completion-code copying
@@ -12,7 +13,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProofApp18_11</title>
+  <title>ProofApp18_12</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,600;1,400;1,600;1,700&display=swap" rel="stylesheet">
   <style>
@@ -2880,18 +2881,26 @@ function extractAtomicsFromAst(ast, out = []) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // FORMULA BUILDER HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
-    function initBuilder() {
-      // Collect atomics from current proof
+    function collectBuilderAtomics(extraAsts = []) {
       const atomSet = new Set();
+
       proofLines.forEach(line => {
         extractAtomicsFromAst(line.ast).forEach(a => atomSet.add(a));
+        extractAtomicsFromAst(line.targetAst).forEach(a => atomSet.add(a));
       });
-      
+
+      extractAtomicsFromAst(conclusionAst).forEach(a => atomSet.add(a));
+      extraAsts.forEach(ast => extractAtomicsFromAst(ast).forEach(a => atomSet.add(a)));
+
+      return Array.from(atomSet).sort();
+    }
+
+    function initBuilder(extraAsts = []) {
       builderState = {
         root: { type: 'blank', id: 'b0' },
         focusedId: 'b0',
         idCounter: 1,
-        atomics: Array.from(atomSet).sort()
+        atomics: collectBuilderAtomics(extraAsts)
       };
       
       if (builderState.atomics.length === 0) {
@@ -2971,17 +2980,12 @@ function extractAtomicsFromAst(ast, out = []) {
     }
     
     // Second builder functions (for double-input rules)
-    function initBuilder2() {
-      const atomSet = new Set();
-      proofLines.forEach(line => {
-        extractAtomicsFromAst(line.ast).forEach(a => atomSet.add(a));
-      });
-      
+    function initBuilder2(extraAsts = []) {
       builderState2 = {
         root: { type: 'blank', id: 'b2_0' },
         focusedId: 'b2_0',
         idCounter: 1000,
-        atomics: Array.from(atomSet).sort()
+        atomics: collectBuilderAtomics(extraAsts)
       };
       
       if (builderState2.atomics.length === 0) {
