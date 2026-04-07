@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- ProofApp18_12: fixed ∨ introduction builder atomics so the other-disjunct picker draws from current proof lines plus goal/conclusion formulas, allowing atoms that appear only in the conclusion
+<!-- ProofApp18_13: changed example 25 conclusion to P → (P ∨ Q); completion code now shows by default and correctly restores both saved on/off preferences
+     ProofApp18_12: fixed ∨ introduction builder atomics so the other-disjunct picker draws from current proof lines plus goal/conclusion formulas, allowing atoms that appear only in the conclusion
      ProofApp18_11: reverted fixed completion-code table to a deterministic nonlinear formula based on visible example number; updated codes to remain 8-digit and LMS-describable
      ProofApp18_10: replaced formula-based completion codes with a fixed per-problem code table so codes stay with problems across future renumbering/reordering
      ProofApp18_8: hardened sandbox/incognito behavior by replacing browser-alert dependence with in-app notices and adding a manual-copy fallback modal when clipboard APIs are blocked
@@ -13,7 +14,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProofApp18_12</title>
+  <title>ProofApp18_13</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,600;1,400;1,600;1,700&display=swap" rel="stylesheet">
   <style>
@@ -2166,7 +2167,7 @@
 </style>
 </head>
 <body>
-  <div class="version-badge" id="version-badge">v18.11</div>
+  <div class="version-badge" id="version-badge">v18.13</div>
   <!-- Settings gear (fixed, always visible) -->
   <button class="settings-btn" id="settings-btn-landing" title="Settings">⚙️</button>
   <div class="settings-panel" id="settings-panel">
@@ -2186,7 +2187,7 @@
     <div class="settings-section">
       <h5>Completion Code</h5>
       <div class="settings-option">
-        <input type="checkbox" id="hash-toggle">
+        <input type="checkbox" id="hash-toggle" checked>
         <label for="hash-toggle">Show completion code on proof finish</label>
       </div>
     </div>
@@ -3184,7 +3185,7 @@ function extractAtomicsFromAst(ast, out = []) {
             slug: "25",
             number: 25,
             premises: [],
-            conclusion: "P → P"
+            conclusion: "P → (P ∨ Q)"
           },
           {
             key: "ex027",
@@ -7305,7 +7306,7 @@ document.getElementById('add-blank-btn').addEventListener('click', () => {
     let interactionLog   = [];   // array of event objects
     let logStartTime     = null; // Date.now() at proof start
     let loggingEnabled   = true; // toggled by settings checkbox
-    let hashesEnabled    = false; // toggled by settings checkbox — off by default
+    let hashesEnabled    = true; // toggled by settings checkbox — on by default
 
     // Preambles explain the mode's constraints so an AI can interpret the log correctly.
     const LOG_PREAMBLES = {
@@ -7973,7 +7974,13 @@ document.getElementById('add-blank-btn').addEventListener('click', () => {
       if (hashToggle) {
         try {
           const savedHash = localStorage.getItem('proofapp-hashes');
-          if (savedHash === 'on') { hashesEnabled = true; hashToggle.checked = true; }
+          if (savedHash === 'on') {
+            hashesEnabled = true;
+            hashToggle.checked = true;
+          } else if (savedHash === 'off') {
+            hashesEnabled = false;
+            hashToggle.checked = false;
+          }
         } catch(_) {}
         hashToggle.addEventListener('change', () => {
           hashesEnabled = hashToggle.checked;
