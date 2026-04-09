@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<!-- ProofApp18_14: subproof auto-complete now finalizes pending discharge lines when appropriate and can trigger the completion code if that finishes the proof
+<!-- ProofApp18_18: guided completion cascade now recognizes parent goal lines that become satisfied in place when nested discharge lines finalize; strengthened subproof closing checks; completion logs now include pending-line details; updated visible version badge
+     ProofApp18_17: guided completion detection now reads structural proof state instead of the UI target/subproof stack; proof-start resets volatile IDs/registries; added completion logging and fixed blank-before-goal UID leakage
+     ProofApp18_16: custom proofs and any non-catalog arguments now receive deterministic 8-digit completion codes based on premises+conclusion, so proof-finish codes appear outside the built-in example set
+     ProofApp18_15: cascaded subproof auto-complete now propagates outward through newly-finalized discharge lines, so nested subproof completions can finish enclosing goals and trigger completion codes when appropriate
      ProofApp18_13: changed example 25 conclusion to P → (P ∨ Q); completion code now shows by default and correctly restores both saved on/off preferences
      ProofApp18_12: fixed ∨ introduction builder atomics so the other-disjunct picker draws from current proof lines plus goal/conclusion formulas, allowing atoms that appear only in the conclusion
      ProofApp18_11: reverted fixed completion-code table to a deterministic nonlinear formula based on visible example number; updated codes to remain 8-digit and LMS-describable
@@ -15,7 +18,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProofApp18_14</title>
+  <title>ProofApp18_18</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,600;1,400;1,600;1,700&display=swap" rel="stylesheet">
   <style>
@@ -2168,7 +2171,7 @@
 </style>
 </head>
 <body>
-  <div class="version-badge" id="version-badge">v18.13</div>
+  <div class="version-badge" id="version-badge">v18.18</div>
   <!-- Settings gear (fixed, always visible) -->
   <button class="settings-btn" id="settings-btn-landing" title="Settings">⚙️</button>
   <div class="settings-panel" id="settings-panel">
@@ -2474,6 +2477,7 @@ let subproofLevel  = 0;
 let activeSubproofs  = []; // stack: each entry {id, type, level, goalUid, ...}
 let nextSubproofId   = 1;
 let subproofRegistry = {}; // subId → {id, type, level, parentId, goalUid, dischargeTargetUid}
+let completionModalShown = false;
 
 // ── Guided mode state ────────────────────────────────────────────────────────
 let activeTargetUid    = null; // UID of the line the student is currently trying to derive
@@ -3660,6 +3664,33 @@ function extractAtomicsFromAst(ast, out = []) {
       )
     );
 
+    function generateSeededCompletionCode(seed) {
+      const str = String(seed || '');
+      let h1 = 0x811c9dc5;
+      let h2 = 0x9e3779b9;
+      for (let i = 0; i < str.length; i++) {
+        const ch = str.charCodeAt(i);
+        h1 ^= ch;
+        h1 = Math.imul(h1, 0x01000193);
+        h1 >>>= 0;
+        h2 ^= ch + i;
+        h2 = Math.imul(h2, 0x85ebca6b);
+        h2 = ((h2 << 13) | (h2 >>> 19)) >>> 0;
+      }
+      const mixed = (BigInt(h1 >>> 0) << 32n) ^ BigInt(h2 >>> 0) ^ BigInt(str.length);
+      const code = Number(mixed % 90000000n) + 10000000;
+      return String(code).padStart(8, '0');
+    }
+
+    function getCurrentCompletionCode() {
+      if (!hashesEnabled) return '';
+      if (currentExample && completionHashes[currentExample]) return completionHashes[currentExample];
+      const premiseSeed = (premisesAst || []).map(ast => renderFormula(ast)).join(' || ');
+      const conclusionSeed = conclusionAst ? renderFormula(conclusionAst) : '';
+      const seed = premiseSeed + ' => ' + conclusionSeed;
+      return generateSeededCompletionCode(seed);
+    }
+
     const ruleConfigs = {
       '→E': {
         title: '→E (Conditional Elimination)',
@@ -4602,6 +4633,17 @@ function startProof() {
       const example = examples[currentExample];
       if (!example) return;
 
+      // Reset volatile proof/runtime state so completion and subproof bookkeeping
+      // never inherit stale data from a previous proof attempt.
+      completionModalShown = false;
+      subproofRegistry = {};
+      nextSubproofId = 1;
+      nextUid = 1;
+      activeTargetUid = null;
+      selectedInspectUid = null;
+      deletePreviewUids = new Set();
+      uiPhase = 'target';
+
       if (example._isCustom) {
         premises = customPremises.filter(p => p).slice();
         conclusion = customConclusion;
@@ -4865,32 +4907,90 @@ function showProofModal(title, message, buttons, extraClass) {
 }
 
 // Check whether the main proof is complete in guided mode:
-// a level-0 non-premise line matches conclusionAst and no subproofs remain open.
-// If so, show the congratulations modal.
-function checkGuidedCompletion() {
-  if (!conclusionAst) return;
-  if (activeSubproofs.length > 0) return;
-  // Include goal lines with a filled ast — the main proof conclusion lives
-  // on the main goal line which keeps kind==='goal' even after being filled.
-  // Exclude lines still marked as pending (subproof discharge not yet finalized).
-  const done = proofLines.some(l => {
+// a level-0 non-premise line matches conclusionAst, all subproof goals are satisfied,
+// and no guided lines remain pending. If so, show the congratulations modal.
+function isPendingJustification(justification) {
+  return !!(justification && typeof justification === 'object' &&
+    justification.display && justification.display.includes('(pending)'));
+}
+
+function hasUnfilledGuidedSubproofGoals() {
+  return proofLines.some(l => l.kind === 'goal' && l.level > 0 && !l.ast);
+}
+
+function listPendingGuidedLines() {
+  return proofLines.filter(l => isPendingJustification(l.justification)).map(l => ({
+    n: l.number,
+    formula: l.ast ? renderFormula(l.ast) : '',
+    level: l.level,
+    kind: l.kind || 'normal'
+  }));
+}
+
+function hasPendingGuidedLines() {
+  return listPendingGuidedLines().length > 0;
+}
+
+function goalLineIsStructurallySatisfied(goalLine) {
+  if (!goalLine || goalLine.kind !== 'goal' || !goalLine.targetAst || !goalLine.ast) return false;
+  if (!astEquals(goalLine.ast, goalLine.targetAst)) return false;
+  if (isPendingJustification(goalLine.justification)) return false;
+  return true;
+}
+
+function findCompletedGuidedConclusionLine() {
+  return proofLines.find(l => {
     if (l.isPremise) return false;
     if (l.level !== 0) return false;
     if (l.kind === 'blank') return false;
     if (l.kind === 'goal' && !l.ast) return false;
     if (!l.ast || !astEquals(l.ast, conclusionAst)) return false;
-    // Reject lines whose justification is still in pending/pre-fill state
-    if (l.justification && typeof l.justification === 'object' &&
-        l.justification.display && l.justification.display.includes('(pending)')) return false;
+    if (isPendingJustification(l.justification)) return false;
     return true;
+  }) || null;
+}
+
+function computeGuidedCompletionState() {
+  const pendingLineDetails = listPendingGuidedLines();
+  const state = {
+    hasConclusion: !!conclusionAst,
+    unfilledSubproofGoals: hasUnfilledGuidedSubproofGoals(),
+    pendingLines: pendingLineDetails.length > 0,
+    pendingLineDetails,
+    conclusionLine: findCompletedGuidedConclusionLine()
+  };
+  state.done = !!(state.hasConclusion && !state.unfilledSubproofGoals && !state.pendingLines && state.conclusionLine);
+  return state;
+}
+
+function checkGuidedCompletion(context = '') {
+  if (completionModalShown) return;
+  const state = computeGuidedCompletionState();
+  logEvent('completion-check', {
+    mode: 'guided',
+    context,
+    result: state.done ? 'complete' : 'incomplete',
+    unfilledSubproofGoals: state.unfilledSubproofGoals,
+    pendingLines: state.pendingLines,
+    pendingLineDetails: state.pendingLineDetails,
+    conclusionLine: state.conclusionLine ? { n: state.conclusionLine.number, formula: renderFormula(state.conclusionLine.ast) } : null,
+    uiActiveSubproofDepth: activeSubproofs.length
   });
-  if (!done) return;
+  if (!state.done) return;
+  completionModalShown = true;
   showCongratsModal();
 }
 
 function showCongratsModal() {
   const concl = conclusionAst ? renderFormula(conclusionAst) : '';
-  const code = hashesEnabled ? (completionHashes[currentExample] || '') : '';
+  const code = getCurrentCompletionCode();
+  logEvent('completion-modal', {
+    mode: currentMode,
+    example: currentExample || null,
+    conclusion: concl,
+    codeShown: !!code,
+    hashesEnabled
+  });
   const hashLine = code
     ? `<div class="modal-hash-box">Completion code: <span class="modal-hash">${code}</span><button type="button" class="modal-hash-copy" id="modal-copy-code">Copy code</button><div class="modal-hash-copy-feedback" id="modal-copy-code-feedback">Code copied!</div></div>`
     : '';
@@ -4982,32 +5082,14 @@ function commitDerived(ast, justification, supportUids = []) {
   const wasBlank = line.kind === 'blank';
   if (line.kind === 'blank') line.kind = 'normal';
 
-  // If we just satisfied a subproof goal, close the subproof
+  // If we just satisfied a subproof goal, close the subproof. If that
+  // finalizes a discharge line which itself matches an enclosing goal, keep
+  // auto-completing outward through the now-available reiterated conclusions.
+  let cascadeSourceUid = null;
   if (line.kind === 'goal' && activeSubproofs.length > 0) {
-    const current = activeSubproofs[activeSubproofs.length - 1];
-    if (current.goalUid === line.uid) {
-      activeSubproofs.pop();
-      subproofLevel = Math.max(0, subproofLevel - 1);
-
-      // If this subproof's discharge target exists and ALL sibling subproofs
-      // sharing that target now have their goals filled, remove '(pending)'.
-      const reg = subproofRegistry[current.id];
-      if (reg && reg.dischargeTargetUid) {
-        const siblings = subproofsDischargedBy(reg.dischargeTargetUid);
-        const allDone = siblings.every(s => {
-          const gLine = s.goalUid ? findLineByUid(s.goalUid) : null;
-          return gLine && gLine.ast;
-        });
-        if (allDone) {
-          const dischLine = findLineByUid(reg.dischargeTargetUid);
-          if (dischLine && dischLine.justification && typeof dischLine.justification === 'object') {
-            dischLine.justification = {
-              ...dischLine.justification,
-              display: (dischLine.justification.display || '').replace(/\s*\(pending\)/, '')
-            };
-          }
-        }
-      }
+    cascadeSourceUid = closeCompletedActiveSubproof(line.uid);
+    if (cascadeSourceUid) {
+      cascadeSourceUid = cascadeAutoCompleteOutwardFromSource(cascadeSourceUid);
     }
   }
 
@@ -5051,7 +5133,7 @@ function commitDerived(ast, justification, supportUids = []) {
   });
   renderProof();
   clearActiveTarget();
-  checkGuidedCompletion();
+  checkGuidedCompletion('commitDerived');
 }
 
 // Normalize justification into the standard object form used by renderProof.
@@ -5065,16 +5147,10 @@ function buildJustification(justification, supportUids) {
   };
 }
 
-// Fill the subproof goal line via Reiteration of sourceUid, then delete
-// any unfilled blank lines between the source and the goal.
-function autoCompleteSubproof(sourceUid, goalUid) {
-  const sourceLine = findLineByUid(sourceUid);
-  const goalLine   = findLineByUid(goalUid);
-  if (!sourceLine || !goalLine || !sourceLine.ast) return;
-
-  // Remove unfilled blank lines between source and goal
+function removeUnfilledBlankLinesBetween(sourceUid, goalUid) {
   const sourceIdx = indexOfUid(sourceUid);
   const goalIdx   = indexOfUid(goalUid);
+  if (sourceIdx < 0 || goalIdx < 0 || sourceIdx >= goalIdx) return;
   const toRemove  = [];
   for (let i = sourceIdx + 1; i < goalIdx; i++) {
     const l = proofLines[i];
@@ -5084,6 +5160,110 @@ function autoCompleteSubproof(sourceUid, goalUid) {
     const idx = indexOfUid(uid);
     if (idx >= 0) proofLines.splice(idx, 1);
   });
+}
+
+function finalizeDischargeLineIfReady(reg) {
+  if (!reg || !reg.dischargeTargetUid) return null;
+  const siblings = subproofsDischargedBy(reg.dischargeTargetUid);
+  const allDone = siblings.every(s => {
+    const gLine = s.goalUid ? findLineByUid(s.goalUid) : null;
+    return gLine && gLine.ast;
+  });
+  if (!allDone) return null;
+
+  const dischLine = findLineByUid(reg.dischargeTargetUid);
+  if (!dischLine) return null;
+  if (dischLine.justification && typeof dischLine.justification === 'object') {
+    const nextDisplay = (dischLine.justification.display || '').replace(/\s*\(pending\)/, '');
+    dischLine.justification = {
+      ...dischLine.justification,
+      display: nextDisplay
+    };
+    logEvent('finalize-discharge-line', {
+      line: { n: dischLine.number, formula: dischLine.ast ? renderFormula(dischLine.ast) : '' },
+      rule: dischLine.justification.rule || '',
+      display: nextDisplay
+    });
+  }
+  return dischLine;
+}
+
+function closeCompletedActiveSubproof(goalUid) {
+  if (activeSubproofs.length === 0) return null;
+  const current = activeSubproofs[activeSubproofs.length - 1];
+  if (!current || current.goalUid !== goalUid) return null;
+
+  const goalLine = findLineByUid(goalUid);
+  if (!goalLine || !goalLine.ast) return null;
+  if (goalLine.targetAst && !astEquals(goalLine.ast, goalLine.targetAst)) return null;
+  if (isPendingJustification(goalLine.justification)) return null;
+
+  const reg = subproofRegistry[current.id] || current;
+  activeSubproofs.pop();
+  subproofLevel = Math.max(0, subproofLevel - 1);
+
+  const dischLine = finalizeDischargeLineIfReady(reg);
+  return dischLine ? dischLine.uid : null;
+}
+
+function cascadeAutoCompleteOutwardFromSource(sourceUid) {
+  let currentSourceUid = sourceUid;
+
+  while (activeSubproofs.length > 0) {
+    const current = activeSubproofs[activeSubproofs.length - 1];
+    const goalLine = current && current.goalUid ? findLineByUid(current.goalUid) : null;
+    const sourceLine = currentSourceUid ? findLineByUid(currentSourceUid) : null;
+
+    if (!goalLine || !goalLine.targetAst) break;
+
+    const goalAlreadySatisfied = goalLineIsStructurallySatisfied(goalLine);
+    const canFillFromSource = !!(
+      sourceLine && sourceLine.ast && !goalLine.ast && astEquals(sourceLine.ast, goalLine.targetAst)
+    );
+
+    if (canFillFromSource) {
+      removeUnfilledBlankLinesBetween(currentSourceUid, current.goalUid);
+      goalLine.ast = cloneAst(sourceLine.ast);
+      goalLine.justification = {
+        rule: 'Reit',
+        supportUids: [currentSourceUid],
+        display: 'Reit'
+      };
+      logEvent('cascade-fill-goal', {
+        sourceLine: { n: sourceLine.number, formula: renderFormula(sourceLine.ast) },
+        goalLine: { n: goalLine.number, formula: renderFormula(goalLine.targetAst) }
+      });
+    } else if (!goalAlreadySatisfied) {
+      break;
+    } else {
+      logEvent('cascade-close-satisfied-goal', {
+        goalLine: { n: goalLine.number, formula: renderFormula(goalLine.ast) }
+      });
+    }
+
+    currentSourceUid = closeCompletedActiveSubproof(current.goalUid);
+    if (!currentSourceUid && activeSubproofs.length > 0) {
+      const parentGoal = findLineByUid(activeSubproofs[activeSubproofs.length - 1].goalUid);
+      if (!goalLineIsStructurallySatisfied(parentGoal)) break;
+    }
+  }
+
+  return currentSourceUid;
+}
+
+// Fill the subproof goal line via Reiteration of sourceUid, then delete
+// any unfilled blank lines between the source and the goal.
+function autoCompleteSubproof(sourceUid, goalUid) {
+  const sourceLine = findLineByUid(sourceUid);
+  const goalLine   = findLineByUid(goalUid);
+  if (!sourceLine || !goalLine || !sourceLine.ast) return;
+
+  logEvent('auto-complete-subproof', {
+    sourceLine: { n: sourceLine.number, formula: renderFormula(sourceLine.ast) },
+    goalLine: { n: goalLine.number, formula: goalLine.targetAst ? renderFormula(goalLine.targetAst) : '' }
+  });
+
+  removeUnfilledBlankLinesBetween(sourceUid, goalUid);
 
   // Fill goal line with Reiteration
   goalLine.ast = cloneAst(sourceLine.ast);
@@ -5093,34 +5273,9 @@ function autoCompleteSubproof(sourceUid, goalUid) {
     display: 'Reit'
   };
 
-  // Close the subproof
-  let closedSubproof = null;
-  if (activeSubproofs.length > 0) {
-    const current = activeSubproofs[activeSubproofs.length - 1];
-    if (current.goalUid === goalUid) {
-      closedSubproof = subproofRegistry[current.id] || current;
-      activeSubproofs.pop();
-      subproofLevel = Math.max(0, subproofLevel - 1);
-
-      // If this auto-completed goal finishes every sibling subproof tied to the
-      // same discharge target, finalize that target by removing '(pending)'.
-      if (closedSubproof && closedSubproof.dischargeTargetUid) {
-        const siblings = subproofsDischargedBy(closedSubproof.dischargeTargetUid);
-        const allDone = siblings.every(s => {
-          const gLine = s.goalUid ? findLineByUid(s.goalUid) : null;
-          return gLine && gLine.ast;
-        });
-        if (allDone) {
-          const dischLine = findLineByUid(closedSubproof.dischargeTargetUid);
-          if (dischLine && dischLine.justification && typeof dischLine.justification === 'object') {
-            dischLine.justification = {
-              ...dischLine.justification,
-              display: (dischLine.justification.display || '').replace(/\s*\(pending\)/, '')
-            };
-          }
-        }
-      }
-    }
+  let cascadeSourceUid = closeCompletedActiveSubproof(goalUid);
+  if (cascadeSourceUid) {
+    cascadeSourceUid = cascadeAutoCompleteOutwardFromSource(cascadeSourceUid);
   }
 
   renumberProofLines();
@@ -5128,8 +5283,8 @@ function autoCompleteSubproof(sourceUid, goalUid) {
   renderProof();
   clearActiveTarget();
   // Auto-completing a subproof can finish the entire proof when it finalizes
-  // the last pending discharge line or fills the main goal directly.
-  if (activeSubproofs.length === 0) checkGuidedCompletion();
+  // the last pending discharge line or fills enclosing goals/main goal directly.
+  checkGuidedCompletion('autoCompleteSubproof');
 }
 
 
@@ -7796,7 +7951,7 @@ document.getElementById('add-blank-btn').addEventListener('click', () => {
     // Called after checkAllJust. Shows congrats popup only when every
     // committed line is clean and the conclusion has been derived.
     function checkFreeCompletion() {
-      if (!conclusionAst) return;
+      if (completionModalShown || !conclusionAst) return;
       const hasProblems = document.querySelectorAll(
         '.wff-error, .just-error, .just-indeterminate'
       ).length > 0;
@@ -7806,7 +7961,10 @@ document.getElementById('add-blank-btn').addEventListener('click', () => {
         !(l.kind === 'goal' && !l.ast) &&
         l.ast && astEquals(l.ast, conclusionAst)
       );
-      if (done) showCongratsModal();
+      if (done) {
+        completionModalShown = true;
+        showCongratsModal();
+      }
     }
 
     // ── Status UI ─────────────────────────────────────────────────────────────
