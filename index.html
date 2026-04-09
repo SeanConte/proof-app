@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- ProofApp18_13: changed example 25 conclusion to P → (P ∨ Q); completion code now shows by default and correctly restores both saved on/off preferences
+<!-- ProofApp18_14: subproof auto-complete now finalizes pending discharge lines when appropriate and can trigger the completion code if that finishes the proof
+     ProofApp18_13: changed example 25 conclusion to P → (P ∨ Q); completion code now shows by default and correctly restores both saved on/off preferences
      ProofApp18_12: fixed ∨ introduction builder atomics so the other-disjunct picker draws from current proof lines plus goal/conclusion formulas, allowing atoms that appear only in the conclusion
      ProofApp18_11: reverted fixed completion-code table to a deterministic nonlinear formula based on visible example number; updated codes to remain 8-digit and LMS-describable
      ProofApp18_10: replaced formula-based completion codes with a fixed per-problem code table so codes stay with problems across future renumbering/reordering
@@ -14,7 +15,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProofApp18_13</title>
+  <title>ProofApp18_14</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,600;1,400;1,600;1,700&display=swap" rel="stylesheet">
   <style>
@@ -5093,11 +5094,32 @@ function autoCompleteSubproof(sourceUid, goalUid) {
   };
 
   // Close the subproof
+  let closedSubproof = null;
   if (activeSubproofs.length > 0) {
     const current = activeSubproofs[activeSubproofs.length - 1];
     if (current.goalUid === goalUid) {
+      closedSubproof = subproofRegistry[current.id] || current;
       activeSubproofs.pop();
       subproofLevel = Math.max(0, subproofLevel - 1);
+
+      // If this auto-completed goal finishes every sibling subproof tied to the
+      // same discharge target, finalize that target by removing '(pending)'.
+      if (closedSubproof && closedSubproof.dischargeTargetUid) {
+        const siblings = subproofsDischargedBy(closedSubproof.dischargeTargetUid);
+        const allDone = siblings.every(s => {
+          const gLine = s.goalUid ? findLineByUid(s.goalUid) : null;
+          return gLine && gLine.ast;
+        });
+        if (allDone) {
+          const dischLine = findLineByUid(closedSubproof.dischargeTargetUid);
+          if (dischLine && dischLine.justification && typeof dischLine.justification === 'object') {
+            dischLine.justification = {
+              ...dischLine.justification,
+              display: (dischLine.justification.display || '').replace(/\s*\(pending\)/, '')
+            };
+          }
+        }
+      }
     }
   }
 
@@ -5105,10 +5127,8 @@ function autoCompleteSubproof(sourceUid, goalUid) {
   autoAddBlankIfNeeded();
   renderProof();
   clearActiveTarget();
-  // Do NOT call checkGuidedCompletion here — the discharge line (e.g. P→Q) has
-  // not been committed yet. The normal commitDerived path will check completion
-  // after the discharge is written. Exception: if we're at level 0 and the main
-  // goal was just filled, check now.
+  // Auto-completing a subproof can finish the entire proof when it finalizes
+  // the last pending discharge line or fills the main goal directly.
   if (activeSubproofs.length === 0) checkGuidedCompletion();
 }
 
