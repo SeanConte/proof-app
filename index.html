@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<!-- ProofApp18_18: guided completion cascade now recognizes parent goal lines that become satisfied in place when nested discharge lines finalize; strengthened subproof closing checks; completion logs now include pending-line details; updated visible version badge
+<!-- ProofApp18_20: guided mode now locks the active target once a rule is selected, so plain background clicks no longer clear or retarget mid-rule; only a background double-click clears guided focus; updated visible version badge
+     ProofApp18_19: renumber proof lines immediately after cascade subproof auto-cleanup so late-stage ∨E examples (including 54 and 58) keep contiguous line numbers during nested auto-completion; updated visible version badge
+     ProofApp18_18: guided completion cascade now recognizes parent goal lines that become satisfied in place when nested discharge lines finalize; strengthened subproof closing checks; completion logs now include pending-line details; updated visible version badge
      ProofApp18_17: guided completion detection now reads structural proof state instead of the UI target/subproof stack; proof-start resets volatile IDs/registries; added completion logging and fixed blank-before-goal UID leakage
      ProofApp18_16: custom proofs and any non-catalog arguments now receive deterministic 8-digit completion codes based on premises+conclusion, so proof-finish codes appear outside the built-in example set
      ProofApp18_15: cascaded subproof auto-complete now propagates outward through newly-finalized discharge lines, so nested subproof completions can finish enclosing goals and trigger completion codes when appropriate
@@ -18,7 +20,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProofApp18_18</title>
+  <title>ProofApp18_20</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,600;1,400;1,600;1,700&display=swap" rel="stylesheet">
   <style>
@@ -2171,7 +2173,7 @@
 </style>
 </head>
 <body>
-  <div class="version-badge" id="version-badge">v18.18</div>
+  <div class="version-badge" id="version-badge">v18.20</div>
   <!-- Settings gear (fixed, always visible) -->
   <button class="settings-btn" id="settings-btn-landing" title="Settings">⚙️</button>
   <div class="settings-panel" id="settings-panel">
@@ -4555,9 +4557,10 @@ function extractAtomicsFromAst(ast, out = []) {
     document.getElementById('back-btn').addEventListener('click', () => {
       showPage('landing-page');
     });
-    // Click empty space in the proof area to clear the active target selection (rule-selection stage).
-    // Clicking the proof background (not on any line) clears the active selection.
-    // In free mode this clears view-focus only; edit focus requires an explicit dblclick away.
+    // Guided mode background behavior:
+    // - before a rule is selected, a background click clears the current guided focus
+    // - once a rule is selected, the guided focus stays locked until a background double-click or explicit cancel
+    // Free mode still uses background double-click to clear edit focus.
     document.getElementById('proof-lines').addEventListener('click', (e) => {
       const onLine = e.target && e.target.closest && e.target.closest('.proof-line');
       if (!onLine) {
@@ -4569,15 +4572,22 @@ function extractAtomicsFromAst(ast, out = []) {
             updateFreeModeUI();
             renderProof();
           }
-        } else {
+        } else if (!currentRule) {
           clearActiveTarget();
         }
       }
     });
     document.getElementById('proof-lines').addEventListener('dblclick', (e) => {
+      const onLine = e.target && e.target.closest && e.target.closest('.proof-line');
       if (currentMode === 'free') {
-        const onLine = e.target && e.target.closest && e.target.closest('.proof-line');
         if (!onLine) freeClearFocus();
+      } else if (!onLine) {
+        if (currentRule) {
+          closeTemplate();
+          clearFocusAll();
+        } else if (activeTargetUid || selectedInspectUid || activeBlank) {
+          clearFocusAll();
+        }
       }
     });
 
@@ -5156,10 +5166,15 @@ function removeUnfilledBlankLinesBetween(sourceUid, goalUid) {
     const l = proofLines[i];
     if (l.kind === 'blank' && !l.ast) toRemove.push(l.uid);
   }
+
+  if (toRemove.length === 0) return;
+
   toRemove.forEach(uid => {
     const idx = indexOfUid(uid);
     if (idx >= 0) proofLines.splice(idx, 1);
   });
+
+  renumberProofLines();
 }
 
 function finalizeDischargeLineIfReady(reg) {
@@ -6833,6 +6848,12 @@ function isValidForBlank(line, blankId, blankType) {
     document.querySelectorAll('.blank-slot, .side-slot').forEach(s => s.classList.remove('active'));
     activeBlank = null;
     checkExecuteReady();
+    return;
+  }
+
+  // Once a guided rule is armed, keep the current target locked until the rule is
+  // explicitly cancelled or the user background-double-clicks to clear focus.
+  if (currentRule) {
     return;
   }
 
